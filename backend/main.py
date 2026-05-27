@@ -15,7 +15,7 @@ from schemas import (
     NotificacaoResponse
 )
 
-app = FastAPI(title="Agendamento API")
+app = FastAPI(title="AAMAVASF API")
 
 
 # ========== Auth endpoints ==========
@@ -32,8 +32,8 @@ def registrar(usuario: UsuarioCreate, db: Session = Depends(get_db)):
         senha_hash=hashed,
         cpf=usuario.cpf,
         telefone=usuario.telefone,
-        nomeDependente=usuario.nomeDependente,
-        dataNascDep=usuario.dataNascDep
+        nome_dependente=usuario.nome_dependente,
+        data_nasc_dep=usuario.data_nasc_dep
     )
     db.add(db_usuario)
     db.commit()
@@ -65,12 +65,12 @@ def visualizar_agendamentos(current_user: Usuario = Depends(get_current_user), d
     result = []
     for a in agendamentos:
         horario_resp = HorarioResponse.model_validate(a.horario)
-        horario_resp.temVagas = a.horario.temVagas()
+        horario_resp.tem_vagas = a.horario.tem_vagas()
         result.append(AgendamentoResponse(
             id=a.id,
-            dataAgendamento=a.dataAgendamento,
+            data_agendamento=a.data_agendamento,
             status=a.status,
-            dataCancelamento=a.dataCancelamento,
+            data_cancelamento=a.data_cancelamento,
             compareceu=a.compareceu,
             usuario_id=a.usuario_id,
             horario=horario_resp,
@@ -84,9 +84,9 @@ def agendar(agendamento: AgendamentoCreate, current_user: Usuario = Depends(get_
     horario = db.query(HorarioDisponivel).filter(HorarioDisponivel.id == agendamento.horario_id).first()
     if not horario:
         raise HTTPException(status_code=404, detail="Horário não encontrado")
-    if not horario.temVagas():
+    if not horario.tem_vagas():
         raise HTTPException(status_code=400, detail="Sem vagas disponíveis")
-    if not horario.reservaVagas():
+    if not horario.reserva_vagas():
         raise HTTPException(status_code=400, detail="Falha ao reservar vaga")
     db_agendamento = Agendamento(usuario_id=current_user.id, horario_id=horario.id)
     db.add(db_agendamento)
@@ -95,19 +95,19 @@ def agendar(agendamento: AgendamentoCreate, current_user: Usuario = Depends(get_
     # Notificação
     notif = Notificacao(
         titulo="Agendamento criado",
-        mensagem=f"Seu agendamento para {horario.servico.titulo} em {horario.datahoraInicio} foi criado.",
+        mensagem=f"Seu agendamento para {horario.servico.titulo} em {horario.datahora_inicio} foi criado.",
         usuario_id=current_user.id,
         tipo="agendamento"
     )
     db.add(notif)
     db.commit()
     horario_resp = HorarioResponse.model_validate(horario)
-    horario_resp.temVagas = horario.temVagas()
+    horario_resp.tem_vagas = horario.tem_vagas()
     return AgendamentoResponse(
         id=db_agendamento.id,
-        dataAgendamento=db_agendamento.dataAgendamento,
+        data_agendamento=db_agendamento.data_agendamento,
         status=db_agendamento.status,
-        dataCancelamento=db_agendamento.dataCancelamento,
+        data_cancelamento=db_agendamento.data_cancelamento,
         compareceu=db_agendamento.compareceu,
         usuario_id=db_agendamento.usuario_id,
         horario=horario_resp,
@@ -141,12 +141,12 @@ def visualizar_todos_agendamentos(admin: Usuario = Depends(get_current_admin), d
     result = []
     for a in agendamentos:
         horario_resp = HorarioResponse.model_validate(a.horario)
-        horario_resp.temVagas = a.horario.temVagas()
+        horario_resp.tem_vagas = a.horario.tem_vagas()
         result.append(AgendamentoResponse(
             id=a.id,
-            dataAgendamento=a.dataAgendamento,
+            data_agendamento=a.data_agendamento,
             status=a.status,
-            dataCancelamento=a.dataCancelamento,
+            data_cancelamento=a.data_cancelamento,
             compareceu=a.compareceu,
             usuario_id=a.usuario_id,
             horario=horario_resp,
@@ -176,8 +176,8 @@ def adicionar_horario(servico_id: int, horario: HorarioCreate, admin: Usuario = 
     if not servico:
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
     db_horario = HorarioDisponivel(
-        datahoraInicio=horario.datahoraInicio,
-        vagasTotal=horario.vagasTotal,
+        datahora_inicio=horario.datahora_inicio,
+        vagas_total=horario.vagas_total,
         local=horario.local,
         observacao=horario.observacao,
         servico_id=servico_id
@@ -186,7 +186,7 @@ def adicionar_horario(servico_id: int, horario: HorarioCreate, admin: Usuario = 
     db.commit()
     db.refresh(db_horario)
     resp = HorarioResponse.model_validate(db_horario)
-    resp.temVagas = db_horario.temVagas()
+    resp.tem_vagas = db_horario.tem_vagas()
     return resp
 
 
@@ -205,7 +205,7 @@ def remover_horario(horario_id: int, admin: Usuario = Depends(get_current_admin)
 # ========== Notificações ==========
 @app.get("/notificacoes", response_model=List[NotificacaoResponse])
 def listar_notificacoes(current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    notificacoes = db.query(Notificacao).filter(Notificacao.usuario_id == current_user.id).order_by(Notificacao.dataEnvio.desc()).all()
+    notificacoes = db.query(Notificacao).filter(Notificacao.usuario_id == current_user.id).order_by(Notificacao.data_envio.desc()).all()
     return notificacoes
 
 

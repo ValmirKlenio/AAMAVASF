@@ -10,8 +10,8 @@ class UsuarioCreate(BaseModel):
     senha: str
     cpf: str
     telefone: str
-    nomeDependente: Optional[str] = None
-    dataNascDep: Optional[date] = None
+    nome_dependente: Optional[str] = None
+    data_nasc_dep: Optional[date] = None
 
 
 class UsuarioResponse(BaseModel):
@@ -21,9 +21,9 @@ class UsuarioResponse(BaseModel):
     cpf: str
     telefone: str
     tipo: TipoUsuario
-    dataCadastro: datetime
-    nomeDependente: Optional[str]
-    dataNascDep: Optional[date]
+    data_cadastro: datetime
+    nome_dependente: Optional[str]
+    data_nasc_dep: Optional[date]
 
     class Config:
         from_attributes = True
@@ -56,21 +56,21 @@ class ServicoResponse(BaseModel):
 
 
 class HorarioCreate(BaseModel):
-    datahoraInicio: datetime
-    vagasTotal: int = 1
+    datahora_inicio: datetime
+    vagas_total: int = 1
     local: str
     observacao: Optional[str] = None
 
 
 class HorarioResponse(BaseModel):
     id: int
-    datahoraInicio: datetime
-    vagasTotal: int
-    vagasOcupadas: int
+    datahora_inicio: datetime
+    vagas_total: int
+    vagas_ocupadas: int
     local: str
     observacao: Optional[str]
     servico_id: int
-    temVagas: bool
+    tem_vagas: bool
 
     class Config:
         from_attributes = True
@@ -82,9 +82,9 @@ class AgendamentoCreate(BaseModel):
 
 class AgendamentoResponse(BaseModel):
     id: int
-    dataAgendamento: datetime
+    data_agendamento: datetime
     status: StatusAgendamento
-    dataCancelamento: Optional[datetime]
+    data_cancelamento: Optional[datetime]
     compareceu: bool
     usuario_id: int
     horario: HorarioResponse
@@ -98,7 +98,7 @@ class NotificacaoResponse(BaseModel):
     id: int
     titulo: str
     mensagem: str
-    dataEnvio: datetime
+    data_envio: datetime
     lida: bool
     tipo: str
 

@@ -34,9 +34,9 @@ class Usuario(Base):
     cpf = Column(String, unique=True, index=True, nullable=False)
     telefone = Column(String)
     tipo = Column(Enum(TipoUsuario), default=TipoUsuario.CLIENTE)
-    dataCadastro = Column(DateTime, default=datetime.utcnow)
-    nomeDependente = Column(String, nullable=True)
-    dataNascDep = Column(Date, nullable=True)
+    data_cadastro = Column(DateTime, default=datetime.utcnow)
+    nome_dependente = Column(String, nullable=True)
+    data_nasc_dep = Column(Date, nullable=True)
 
     agendamentos = relationship("Agendamento", back_populates="usuario")
     notificacoes = relationship("Notificacao", back_populates="usuario")
@@ -60,9 +60,9 @@ class HorarioDisponivel(Base):
     __tablename__ = "horarios_disponiveis"
 
     id = Column(Integer, primary_key=True, index=True)
-    datahoraInicio = Column(DateTime, nullable=False, index=True)
-    vagasTotal = Column(Integer, default=1)
-    vagasOcupadas = Column(Integer, default=0)
+    datahora_inicio = Column(DateTime, nullable=False, index=True)
+    vagas_total = Column(Integer, default=1)
+    vagas_ocupadas = Column(Integer, default=0)
     local = Column(String)
     observacao = Column(String)
     servico_id = Column(Integer, ForeignKey("servicos.id"), nullable=False)
@@ -71,11 +71,11 @@ class HorarioDisponivel(Base):
     agendamentos = relationship("Agendamento", back_populates="horario")
 
     def temVagas(self) -> bool:
-        return self.vagasOcupadas < self.vagasTotal
+        return self.vagas_ocupadas < self.vagas_total
 
     def reservaVagas(self, quantidade: int = 1) -> bool:
-        if self.vagasOcupadas + quantidade <= self.vagasTotal:
-            self.vagasOcupadas += quantidade
+        if self.vagas_ocupadas + quantidade <= self.vagas_total:
+            self.vagas_ocupadas += quantidade
             return True
         return False
 
@@ -84,9 +84,9 @@ class Agendamento(Base):
     __tablename__ = "agendamentos"
 
     id = Column(Integer, primary_key=True, index=True)
-    dataAgendamento = Column(DateTime, default=datetime.utcnow)
+    data_agendamento = Column(DateTime, default=datetime.utcnow)
     status = Column(Enum(StatusAgendamento), default=StatusAgendamento.PENDENTE)
-    dataCancelamento = Column(DateTime, nullable=True)
+    data_cancelamento = Column(DateTime, nullable=True)
     compareceu = Column(Boolean, default=False)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     horario_id = Column(Integer, ForeignKey("horarios_disponiveis.id"), nullable=False)
@@ -96,9 +96,9 @@ class Agendamento(Base):
 
     def cancelar(self, db_session):
         self.status = StatusAgendamento.CANCELADO
-        self.dataCancelamento = datetime.utcnow()
+        self.data_cancelamento = datetime.utcnow()
         # libera vaga
-        self.horario.vagasOcupadas -= 1
+        self.horario.vagas_ocupadas -= 1
         db_session.commit()
 
     def confirmarPresenca(self):
@@ -112,7 +112,7 @@ class Notificacao(Base):
     id = Column(Integer, primary_key=True, index=True)
     titulo = Column(String, nullable=False)
     mensagem = Column(String)
-    dataEnvio = Column(DateTime, default=datetime.utcnow)
+    data_envio = Column(DateTime, default=datetime.utcnow)
     lida = Column(Boolean, default=False)
     tipo = Column(String)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
