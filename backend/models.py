@@ -17,11 +17,14 @@ class StatusAgendamento(str, enum.Enum):
     CANCELADO = "cancelado"
     REALIZADO = "realizado"
 
-class CategoriaServico(str, enum.Enum):
-    CONSULTA = "consulta"
-    EXAMEN = "examen"
-    PROCEDIMENTO = "procedimento"
-    OUTRO = "outro"
+class CategoriaServico(Base):
+    __tablename__ = "categoria_servico"
+    id_categoria = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(50), nullable=False)
+    descricao = Column(String(200))
+    cor = Column(String(7))
+
+    servicos = relationship("Servico", back_populates="categoria_rel")
 
 
 class Usuario(Base):
@@ -51,8 +54,9 @@ class Servico(Base):
     duracao = Column(Integer)  # minutes
     valor = Column(Float)
     ativo = Column(Boolean, default=True)
-    categoria = Column(Enum(CategoriaServico))
+    id_categoria= Column(Integer, ForeignKey("categoria_servico.id_categoria"), nullable=False)
 
+    categoria_rel = relationship("CategoriaServico", back_populates="servicos")
     horarios = relationship("HorarioDisponivel", back_populates="servico")
 
 

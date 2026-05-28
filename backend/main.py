@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from typing import List
 
-from models import Usuario, Agendamento, HorarioDisponivel, Servico, Notificacao, StatusAgendamento, TipoUsuario
+from models import Usuario, Agendamento, HorarioDisponivel, Servico, Notificacao, StatusAgendamento, CategoriaServico ,TipoUsuario
 from dependencies import (
     get_db, get_password_hash, authenticate_user, create_access_token,
     get_current_user, get_current_admin, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -64,8 +64,16 @@ def visualizar_agendamentos(current_user: Usuario = Depends(get_current_user), d
     agendamentos = db.query(Agendamento).filter(Agendamento.usuario_id == current_user.id).all()
     result = []
     for a in agendamentos:
-        horario_resp = HorarioResponse.model_validate(a.horario)
-        horario_resp.tem_vagas = a.horario.tem_vagas()
+        horario_resp = HorarioResponse(
+            id=a.horario.id,
+            datahora_inicio=a.horario.datahora_inicio,
+            vagas_total=a.horario.vagas_total,
+            vagas_ocupadas=a.horario.vagas_ocupadas,
+            local=a.horario.local,
+            observacao=a.horario.observacao,
+            servico_id=a.horario.servico_id,
+            tem_vagas=a.horario.temVagas()
+        )
         result.append(AgendamentoResponse(
             id=a.id,
             data_agendamento=a.data_agendamento,
@@ -84,9 +92,9 @@ def agendar(agendamento: AgendamentoCreate, current_user: Usuario = Depends(get_
     horario = db.query(HorarioDisponivel).filter(HorarioDisponivel.id == agendamento.horario_id).first()
     if not horario:
         raise HTTPException(status_code=404, detail="Horário não encontrado")
-    if not horario.tem_vagas():
+    if not horario.temVagas():
         raise HTTPException(status_code=400, detail="Sem vagas disponíveis")
-    if not horario.reserva_vagas():
+    if not horario.reservaVagas():
         raise HTTPException(status_code=400, detail="Falha ao reservar vaga")
     db_agendamento = Agendamento(usuario_id=current_user.id, horario_id=horario.id)
     db.add(db_agendamento)
@@ -101,8 +109,16 @@ def agendar(agendamento: AgendamentoCreate, current_user: Usuario = Depends(get_
     )
     db.add(notif)
     db.commit()
-    horario_resp = HorarioResponse.model_validate(horario)
-    horario_resp.tem_vagas = horario.tem_vagas()
+    horario_resp = HorarioResponse(
+            id=horario.id,
+            datahora_inicio=horario.datahora_inicio,
+            vagas_total=horario.vagas_total,
+            vagas_ocupadas=horario.vagas_ocupadas,
+            local=horario.local,
+            observacao=horario.observacao,
+            servico_id=horario.servico_id,
+            tem_vagas=horario.temVagas()
+        )
     return AgendamentoResponse(
         id=db_agendamento.id,
         data_agendamento=db_agendamento.data_agendamento,
@@ -141,7 +157,7 @@ def visualizar_todos_agendamentos(admin: Usuario = Depends(get_current_admin), d
     result = []
     for a in agendamentos:
         horario_resp = HorarioResponse.model_validate(a.horario)
-        horario_resp.tem_vagas = a.horario.tem_vagas()
+        horario_resp.temVagas = a.horario.temVagas()
         result.append(AgendamentoResponse(
             id=a.id,
             data_agendamento=a.data_agendamento,
@@ -158,12 +174,38 @@ def visualizar_todos_agendamentos(admin: Usuario = Depends(get_current_admin), d
 # ========== Serviços e Horários ==========
 @app.get("/servicos", response_model=List[ServicoResponse])
 def listar_servicos(db: Session = Depends(get_db)):
-    return db.query(Servico).filter(Servico.ativo == True).all()
+    servicos = db.query(Servico).filter(Servico.ativo == True).all()
+    # Para cada serviço, adicionar o nome da categoria
+    result = []
+    for s in servicos:
+        resp = ServicoResponse(
+            id=s.id,
+            titulo=s.titulo,
+            descricao=s.descricao,
+            duracao=s.duracao,
+            valor=s.valor,
+            ativo=s.ativo,
+            id_categoria=s.id_categoria,
+            categoria_nome=s.categoria_rel.nome if s.categoria_rel else None
+        )
+        result.append(resp)
+    return result
 
 
 @app.post("/servicos", response_model=ServicoResponse)
 def criar_servico(servico: ServicoCreate, admin: Usuario = Depends(get_current_admin), db: Session = Depends(get_db)):
-    db_servico = Servico(**servico.model_dump())
+    # Verifica se a categoria existe
+    categoria = db.query(CategoriaServico).filter(CategoriaServico.id_categoria == servico.id_categoria).first()
+    if not categoria:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada")
+    
+    db_servico = Servico(
+        titulo=servico.titulo,
+        descricao=servico.descricao,
+        duracao=servico.duracao,
+        valor=servico.valor,
+        id_categoria=servico.id_categoria
+    )
     db.add(db_servico)
     db.commit()
     db.refresh(db_servico)
@@ -186,7 +228,7 @@ def adicionar_horario(servico_id: int, horario: HorarioCreate, admin: Usuario = 
     db.commit()
     db.refresh(db_horario)
     resp = HorarioResponse.model_validate(db_horario)
-    resp.tem_vagas = db_horario.tem_vagas()
+    resp.temVagas = db_horario.temVagas()
     return resp
 
 

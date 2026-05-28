@@ -39,7 +39,7 @@ class ServicoCreate(BaseModel):
     descricao: Optional[str] = None
     duracao: int
     valor: float
-    categoria: CategoriaServico
+    id_categoria: int
 
 
 class ServicoResponse(BaseModel):
@@ -49,7 +49,8 @@ class ServicoResponse(BaseModel):
     duracao: int
     valor: float
     ativo: bool
-    categoria: CategoriaServico
+    id_categoria: int
+    categoria_nome: Optional[str] = None
 
     class Config:
         from_attributes = True
