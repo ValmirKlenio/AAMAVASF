@@ -17,7 +17,7 @@ class LoginPage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const AuthHeader(),
+            const WaveHeader(),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -115,7 +115,9 @@ class LoginPage extends StatelessWidget {
 
                   PrimaryButton(
                     text: 'Entrar',
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.pushNamed(context, AppRoutes.home);
+                    },
                   ),
 
                   const SizedBox(height: 30),
