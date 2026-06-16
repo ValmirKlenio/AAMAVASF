@@ -15,7 +15,7 @@ class RegisterPage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const AuthHeader(),
+            const WaveHeader(),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
