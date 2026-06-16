@@ -25,6 +25,7 @@ class _AgendaPageState extends State<AgendaPage> {
   late DateTime _focusedMonth;
   late DateTime _selectedDate;
   _AgendaTab _selectedTab = _AgendaTab.eventos;
+  bool _isCanceling = false;
 
   @override
   void initState() {
@@ -60,6 +61,68 @@ class _AgendaPageState extends State<AgendaPage> {
     setState(() {
       _selectedTab = tab;
     });
+  }
+
+  Future<void> _cancelarAgendamento(Agendamento agendamento) async {
+    if (_isCanceling) {
+      return;
+    }
+
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Cancelar agendamento'),
+          content: Text('Deseja cancelar ${agendamento.titulo}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Voltar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Cancelar agendamento'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || shouldCancel != true) {
+      return;
+    }
+
+    setState(() {
+      _isCanceling = true;
+    });
+
+    try {
+      await _agendaRepository.cancelarAgendamento(agendamento.idAgendamento);
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Agendamento cancelado com sucesso.')),
+      );
+
+      setState(_loadAgendamentos);
+    } on AgendaRepositoryException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCanceling = false;
+        });
+      }
+    }
   }
 
   @override
@@ -105,7 +168,13 @@ class _AgendaPageState extends State<AgendaPage> {
                         future: _agendamentosFuture,
                         builder: (context, snapshot) {
                           final agendamentos =
-                              snapshot.data ?? const <Agendamento>[];
+                              (snapshot.data ?? const <Agendamento>[])
+                                  .where(
+                                    (agendamento) =>
+                                        agendamento.status.toLowerCase() !=
+                                        'cancelado',
+                                  )
+                                  .toList();
                           final error = snapshot.hasError
                               ? snapshot.error
                               : null;
@@ -117,6 +186,7 @@ class _AgendaPageState extends State<AgendaPage> {
                                   snapshot.connectionState !=
                                   ConnectionState.done,
                               error: error,
+                              onCancel: _cancelarAgendamento,
                             );
                           }
 
@@ -928,11 +998,13 @@ class _AgendaCommitmentsList extends StatelessWidget {
   final List<Agendamento> agendamentos;
   final bool isLoading;
   final Object? error;
+  final ValueChanged<Agendamento> onCancel;
 
   const _AgendaCommitmentsList({
     required this.agendamentos,
     required this.isLoading,
     required this.error,
+    required this.onCancel,
   });
 
   @override
@@ -980,17 +1052,21 @@ class _AgendaCommitmentsList extends StatelessWidget {
           padding: EdgeInsets.only(
             bottom: index == commitments.length - 1 ? 0 : 8 * scale,
           ),
-          child: _AgendaEventCard(
-            time: agendamento.dataHoraLabel,
-            title: agendamento.titulo,
-            description: agendamento.cardDescription,
-            status: agendamento.statusLabel,
-            icon: _iconForCategory(agendamento.categoriaNome),
-            iconColor: categoryColor,
-            iconBackground: _lightBackground(categoryColor),
-            statusBackground: _lightBackground(statusColor),
-            statusColor: statusColor,
-            leftBorderColor: categoryColor,
+          child: GestureDetector(
+            onTap: () => onCancel(agendamento),
+            behavior: HitTestBehavior.opaque,
+            child: _AgendaEventCard(
+              time: agendamento.dataHoraLabel,
+              title: agendamento.titulo,
+              description: agendamento.cardDescription,
+              status: agendamento.statusLabel,
+              icon: _iconForCategory(agendamento.categoriaNome),
+              iconColor: categoryColor,
+              iconBackground: _lightBackground(categoryColor),
+              statusBackground: _lightBackground(statusColor),
+              statusColor: statusColor,
+              leftBorderColor: categoryColor,
+            ),
           ),
         );
       }),

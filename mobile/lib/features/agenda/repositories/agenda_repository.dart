@@ -47,6 +47,29 @@ class AgendaRepository {
       );
     }
   }
+
+  Future<void> cancelarAgendamento(int agendamentoId) async {
+    final token = await _storage.read(key: 'access_token');
+
+    if (token == null || token.isEmpty) {
+      throw const AgendaRepositoryException(
+        'Sua sessão expirou. Faça login novamente.',
+      );
+    }
+
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        '/usuarios/cancelar/$agendamentoId',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } on DioException catch (error) {
+      throw AgendaRepositoryException.fromDio(error);
+    } on Object {
+      throw const AgendaRepositoryException(
+        'Não foi possível cancelar este agendamento.',
+      );
+    }
+  }
 }
 
 class AgendaRepositoryException implements Exception {
@@ -59,6 +82,13 @@ class AgendaRepositoryException implements Exception {
       return const AgendaRepositoryException(
         'Sua sessão expirou. Faça login novamente.',
       );
+    }
+
+    final detail = error.response?.data is Map<String, dynamic>
+        ? (error.response?.data as Map<String, dynamic>)['detail']?.toString()
+        : null;
+    if (detail != null && detail.trim().isNotEmpty) {
+      return AgendaRepositoryException(detail.trim());
     }
 
     if (error.type == DioExceptionType.connectionError ||

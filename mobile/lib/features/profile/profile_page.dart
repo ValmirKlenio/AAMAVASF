@@ -87,8 +87,23 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _pickProfileImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return _PhotoSourceSheet(
+          onCameraTap: () => Navigator.of(context).pop(ImageSource.camera),
+          onGalleryTap: () => Navigator.of(context).pop(ImageSource.gallery),
+        );
+      },
+    );
+
+    if (source == null) {
+      return;
+    }
+
     final image = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
+      source: source,
       imageQuality: 85,
     );
 
@@ -462,6 +477,105 @@ class _ProfileDetailsSheet extends StatelessWidget {
   }
 }
 
+class _PhotoSourceSheet extends StatelessWidget {
+  final VoidCallback onCameraTap;
+  final VoidCallback onGalleryTap;
+
+  const _PhotoSourceSheet({
+    required this.onCameraTap,
+    required this.onGalleryTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xffFDFEFD),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xffD7DCE8),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _PhotoSourceOption(
+                icon: Icons.photo_camera_outlined,
+                title: 'Tirar foto',
+                onTap: onCameraTap,
+              ),
+              const SizedBox(height: 8),
+              _PhotoSourceOption(
+                icon: Icons.photo_library_outlined,
+                title: 'Escolher da biblioteca',
+                onTap: onGalleryTap,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoSourceOption extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  const _PhotoSourceOption({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xffFDFDFD),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: const Color(0xffF0F2F5), width: 0.8),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 12),
+            Icon(icon, color: const Color(0xff5368D0), size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xff616779),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 1,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _Responsive {
   static const double baseWidth = 402;
 
@@ -640,7 +754,7 @@ class _ProfileCard extends StatelessWidget {
     final imagePath = profileImagePath;
     final hasImage = imagePath != null && imagePath.trim().isNotEmpty;
     final nome = _fallbackText(
-      usuario?.nome,
+      usuario?.primeiroNome,
       fallback: isLoading ? 'Carregando...' : 'Perfil indisponivel',
     );
     final email = _fallbackText(

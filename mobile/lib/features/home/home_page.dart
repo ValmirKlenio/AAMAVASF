@@ -7,6 +7,11 @@ import 'package:mobile/core/routes/app_routes.dart';
 import 'package:mobile/core/widgets/bottom_menu.dart';
 import 'package:mobile/core/widgets/notification_card.dart';
 import 'package:mobile/core/widgets/wave_header.dart';
+import 'package:mobile/features/services/models/horario_disponivel.dart';
+import 'package:mobile/features/services/models/servico.dart';
+import 'package:mobile/features/services/repositories/agendamento_repository.dart'
+    as horarios_repository;
+import 'package:mobile/features/services/repositories/servicos_repository.dart';
 import 'package:mobile/models/usuario.dart';
 
 class HomePage extends StatefulWidget {
@@ -21,13 +26,51 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final AuthService _authService = AuthService();
+  final ServicosRepository _servicosRepository = ServicosRepository();
+  final horarios_repository.AgendamentoRepository _horariosRepository =
+      horarios_repository.AgendamentoRepository();
 
   String _primeiroNome = '';
+  late Future<List<_AvailableServiceEvent>> _eventosFuture;
 
   @override
   void initState() {
     super.initState();
+    _eventosFuture = _loadUpcomingAvailableServices();
     _carregarUsuario();
+  }
+
+  Future<List<_AvailableServiceEvent>> _loadUpcomingAvailableServices() async {
+    final services = await _servicosRepository.listarServicos();
+    final events = <_AvailableServiceEvent>[];
+
+    await Future.wait(
+      services.map((service) async {
+        final horarios = await _horariosRepository.listarHorariosDisponiveis(
+          service.id,
+        );
+
+        if (horarios.isEmpty) {
+          return;
+        }
+
+        horarios.sort(
+          (first, second) =>
+              first.datahoraInicio.compareTo(second.datahoraInicio),
+        );
+
+        events.add(
+          _AvailableServiceEvent(service: service, horario: horarios.first),
+        );
+      }),
+    );
+
+    events.sort(
+      (first, second) =>
+          first.horario.datahoraInicio.compareTo(second.horario.datahoraInicio),
+    );
+
+    return events.take(4).toList();
   }
 
   Future<void> _carregarUsuario() async {
@@ -114,37 +157,7 @@ class _HomePageState extends State<HomePage> {
 
                     SizedBox(height: 10 * scale),
 
-                    const _EventCard(
-                      date: '25 MAI',
-                      title: 'Oficina de Habilidades Sociais',
-                      time: '09:00-11:00',
-                      status: 'Inscrever-se',
-                      iconColor: Color(0xff0047FF),
-                    ),
-
-                    const _EventCard(
-                      date: '02 JUN',
-                      title: 'Roda de Pais e Responsáveis',
-                      time: '19:00-20:30',
-                      status: 'Inscrever-se',
-                      iconColor: Color(0xff00C853),
-                    ),
-
-                    const _EventCard(
-                      date: '10 JUN',
-                      title: 'Palestra de conscientização',
-                      time: '10:00-11:30',
-                      status: 'Inscrever-se',
-                      iconColor: Color(0xff00C853),
-                    ),
-
-                    const _EventCard(
-                      date: '15 JUN',
-                      title: 'Oficina de Habilidades Sociais',
-                      time: '17:00-19:00',
-                      status: 'Inscrever-se',
-                      iconColor: Color(0xff0047FF),
-                    ),
+                    _UpcomingEventsList(eventosFuture: _eventosFuture),
 
                     SizedBox(height: 6 * scale),
                   ],
@@ -496,19 +509,21 @@ class _QuickAccessGrid extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: _QuickAccessCard(
                   title: 'Agenda',
                   icon: Icons.calendar_month_outlined,
-                  iconColor: Color(0xff002CCB),
+                  iconColor: const Color(0xff002CCB),
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.agenda),
                 ),
               ),
               SizedBox(width: gap),
-              const Expanded(
+              Expanded(
                 child: _QuickAccessCard(
-                  title: 'Atendimentos',
+                  title: 'Perfil',
                   icon: Icons.groups_2_outlined,
-                  iconColor: Color(0xffFFB500),
+                  iconColor: const Color(0xffFFB500),
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
                 ),
               ),
             ],
@@ -518,19 +533,21 @@ class _QuickAccessGrid extends StatelessWidget {
 
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: _QuickAccessCard(
                   title: 'Serviços',
                   svgIcon: 'assets/icons/services.svg',
-                  iconColor: Color(0xff00A029),
+                  iconColor: const Color(0xff00A029),
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.services),
                 ),
               ),
               SizedBox(width: gap),
-              const Expanded(
+              Expanded(
                 child: _QuickAccessCard(
                   title: 'Como ajudar',
                   icon: Icons.volunteer_activism_outlined,
-                  iconColor: Color(0xffFF2001),
+                  iconColor: const Color(0xffFF2001),
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.contact),
                 ),
               ),
             ],
@@ -541,41 +558,45 @@ class _QuickAccessGrid extends StatelessWidget {
 
     return Row(
       children: [
-        const Expanded(
+        Expanded(
           child: _QuickAccessCard(
             title: 'Agenda',
             icon: Icons.calendar_month_outlined,
-            iconColor: Color(0xff002CCB),
+            iconColor: const Color(0xff002CCB),
+            onTap: () => Navigator.pushNamed(context, AppRoutes.agenda),
           ),
         ),
 
         SizedBox(width: gap),
 
-        const Expanded(
+        Expanded(
           child: _QuickAccessCard(
-            title: 'Atendimentos',
+            title: 'Perfil',
             icon: Icons.groups_2_outlined,
-            iconColor: Color(0xffFFB500),
+            iconColor: const Color(0xffFFB500),
+            onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
           ),
         ),
 
         SizedBox(width: gap),
 
-        const Expanded(
+        Expanded(
           child: _QuickAccessCard(
             title: 'Serviços',
             svgIcon: 'assets/icons/services.svg',
-            iconColor: Color(0xff00A029),
+            iconColor: const Color(0xff00A029),
+            onTap: () => Navigator.pushNamed(context, AppRoutes.services),
           ),
         ),
 
         SizedBox(width: gap),
 
-        const Expanded(
+        Expanded(
           child: _QuickAccessCard(
             title: 'Como ajudar',
             icon: Icons.volunteer_activism_outlined,
-            iconColor: Color(0xffFF2001),
+            iconColor: const Color(0xffFF2001),
+            onTap: () => Navigator.pushNamed(context, AppRoutes.contact),
           ),
         ),
       ],
@@ -588,12 +609,14 @@ class _QuickAccessCard extends StatelessWidget {
   final IconData? icon;
   final String? svgIcon;
   final Color iconColor;
+  final VoidCallback? onTap;
 
   const _QuickAccessCard({
     required this.title,
     this.icon,
     this.svgIcon,
     required this.iconColor,
+    this.onTap,
   });
 
   @override
@@ -601,51 +624,58 @@ class _QuickAccessCard extends StatelessWidget {
     final double scale = _Responsive.scale(context);
     final bool isVerySmallScreen = _Responsive.isVerySmallScreen(context);
 
-    return Container(
-      height: isVerySmallScreen ? 68 * scale : 72 * scale,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10 * scale),
-        border: Border.all(color: const Color(0xffEFF2F7), width: 1.2 * scale),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 34 * scale,
-            height: 34 * scale,
-            decoration: const BoxDecoration(
-              color: Color(0xffF3F8FF),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: svgIcon != null
-                  ? SvgPicture.asset(
-                      svgIcon!,
-                      width: 22 * scale,
-                      height: 22 * scale,
-                    )
-                  : Icon(icon, color: iconColor, size: 22 * scale),
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: isVerySmallScreen ? 68 * scale : 72 * scale,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10 * scale),
+          border: Border.all(
+            color: const Color(0xffEFF2F7),
+            width: 1.2 * scale,
           ),
-
-          SizedBox(height: 6 * scale),
-
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4 * scale),
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: const Color(0xff686C76),
-                fontSize: 9 * scale,
-                fontWeight: FontWeight.w600,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 34 * scale,
+              height: 34 * scale,
+              decoration: const BoxDecoration(
+                color: Color(0xffF3F8FF),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: svgIcon != null
+                    ? SvgPicture.asset(
+                        svgIcon!,
+                        width: 22 * scale,
+                        height: 22 * scale,
+                      )
+                    : Icon(icon, color: iconColor, size: 22 * scale),
               ),
             ),
-          ),
-        ],
+
+            SizedBox(height: 6 * scale),
+
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4 * scale),
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: const Color(0xff686C76),
+                  fontSize: 9 * scale,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -683,6 +713,132 @@ class _EventsHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AvailableServiceEvent {
+  final Servico service;
+  final HorarioDisponivel horario;
+
+  const _AvailableServiceEvent({required this.service, required this.horario});
+}
+
+class _UpcomingEventsList extends StatelessWidget {
+  final Future<List<_AvailableServiceEvent>> eventosFuture;
+
+  const _UpcomingEventsList({required this.eventosFuture});
+
+  @override
+  Widget build(BuildContext context) {
+    final double scale = _Responsive.scale(context);
+
+    return FutureBuilder<List<_AvailableServiceEvent>>(
+      future: eventosFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return SizedBox(
+            height: _Responsive.eventCardHeight(context),
+            child: const Center(
+              child: CircularProgressIndicator(color: HomePage.primaryBlue),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _EventsMessage(
+            message: 'Nao foi possivel carregar os proximos eventos.',
+            scale: scale,
+          );
+        }
+
+        final events = snapshot.data ?? const <_AvailableServiceEvent>[];
+
+        if (events.isEmpty) {
+          return _EventsMessage(
+            message: 'Nenhum evento proximo encontrado.',
+            scale: scale,
+          );
+        }
+
+        return Column(
+          children: events.map((event) {
+            return _EventCard(
+              date: _dateLabel(event.horario.datahoraInicio),
+              title: event.service.titulo,
+              time: event.horario.horaLabel,
+              status: 'Disponivel',
+              iconColor: _iconColorForCategory(event.service.idCategoria),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  String _dateLabel(DateTime date) {
+    const months = [
+      'JAN',
+      'FEV',
+      'MAR',
+      'ABR',
+      'MAI',
+      'JUN',
+      'JUL',
+      'AGO',
+      'SET',
+      'OUT',
+      'NOV',
+      'DEZ',
+    ];
+
+    return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]}';
+  }
+
+  Color _iconColorForCategory(int categoryId) {
+    switch (categoryId) {
+      case 1:
+        return const Color(0xff00A425);
+      case 2:
+        return const Color(0xff001FE4);
+      case 3:
+        return const Color(0xffE0479E);
+      case 4:
+        return const Color(0xff6B36F8);
+      case 5:
+        return const Color(0xffFFB000);
+      case 6:
+        return const Color(0xffFF2001);
+      default:
+        return const Color(0xff0047FF);
+    }
+  }
+}
+
+class _EventsMessage extends StatelessWidget {
+  final String message;
+  final double scale;
+
+  const _EventsMessage({required this.message, required this.scale});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: _Responsive.eventCardHeight(context),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(2 * scale),
+      ),
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: const Color(0xff686D78),
+          fontSize: 9.4 * scale,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 }

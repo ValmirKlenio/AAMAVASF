@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:mobile/core/widgets/bottom_menu.dart';
 import 'package:mobile/core/widgets/notification_card.dart';
@@ -15,6 +16,8 @@ class ContactPage extends StatelessWidget {
   static const Color background = Color(0xffF6F8FC);
 
   static const String aboutIconAsset = 'assets/icons/heart_puzzle.svg';
+  static const String address =
+      'Rua Itaipu, 130, Jose e Maria, Petrolina - PE, 56320-650';
 
   @override
   Widget build(BuildContext context) {
@@ -75,9 +78,7 @@ class ContactPage extends StatelessWidget {
             ],
           ),
         ),
-        bottomNavigationBar: const BottomMenu(
-          selectedIndex: 3,
-        ),
+        bottomNavigationBar: const BottomMenu(selectedIndex: 3),
       ),
     );
   }
@@ -120,12 +121,13 @@ class _ContactHeader extends StatelessWidget {
 
     final double topSafe = MediaQuery.of(context).padding.top;
 
-    final double headerHeight = topSafe +
+    final double headerHeight =
+        topSafe +
         (isVerySmallScreen
             ? 168 * scale
             : isSmallScreen
-                ? 176 * scale
-                : 184 * scale);
+            ? 176 * scale
+            : 184 * scale);
 
     return WaveHeader(
       height: headerHeight,
@@ -184,9 +186,7 @@ class _ContactHeader extends StatelessWidget {
           Positioned(
             top: topSafe + (13 * scale),
             right: 24 * scale,
-            child: NotificationBellButton(
-              scale: scale,
-            ),
+            child: NotificationBellButton(scale: scale),
           ),
           Positioned(
             right: -35 * scale,
@@ -207,10 +207,7 @@ class _SectionTitle extends StatelessWidget {
   final IconData icon;
   final String title;
 
-  const _SectionTitle({
-    required this.icon,
-    required this.title,
-  });
+  const _SectionTitle({required this.icon, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -218,11 +215,7 @@ class _SectionTitle extends StatelessWidget {
 
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 14 * scale,
-          color: const Color(0xff000047),
-        ),
+        Icon(icon, size: 14 * scale, color: const Color(0xff000047)),
         SizedBox(width: 8 * scale),
         Text(
           title,
@@ -412,11 +405,7 @@ class _LocationCard extends StatelessWidget {
             ),
             child: Stack(
               children: [
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _MapPainter(),
-                  ),
-                ),
+                Positioned.fill(child: CustomPaint(painter: _MapPainter())),
                 Center(
                   child: Icon(
                     Icons.location_on,
@@ -446,7 +435,7 @@ class _LocationCard extends StatelessWidget {
                 ),
                 SizedBox(height: 6 * scale),
                 Text(
-                  'Rua das Acácias, 123\nCentro – Petrolina/PE\nCEP: 56304-120',
+                  'Rua Itaipu, 130\nJose e Maria - Petrolina/PE\nCEP: 56320-650',
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -475,24 +464,168 @@ class _MapLink extends StatelessWidget {
   Widget build(BuildContext context) {
     final double scale = _Responsive.scale(context);
 
-    return Row(
-      children: [
-        Text(
-          'Ver no mapa',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 8.94 * scale,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xff6274DF),
+    return GestureDetector(
+      onTap: () => _showMapOptions(context),
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        children: [
+          Text(
+            'Ver no mapa',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 8.94 * scale,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xff6274DF),
+            ),
+          ),
+          SizedBox(width: 5 * scale),
+          Icon(
+            Icons.open_in_new,
+            size: 10 * scale,
+            color: const Color(0xff0019E5),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMapOptions(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _MapOptionsSheet(),
+    );
+  }
+}
+
+class _MapOptionsSheet extends StatelessWidget {
+  const _MapOptionsSheet();
+
+  static final Uri _browserUri = Uri.parse(
+    'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(ContactPage.address)}',
+  );
+  static final Uri _googleMapsUri = Uri.parse(
+    'google.navigation:q=${Uri.encodeComponent(ContactPage.address)}',
+  );
+  static final Uri _wazeUri = Uri.parse(
+    'https://waze.com/ul?q=${Uri.encodeComponent(ContactPage.address)}&navigate=yes',
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xffFDFEFD),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xffD7DCE8),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _MapOption(
+                icon: Icons.public,
+                title: 'Abrir no navegador',
+                onTap: () => _launch(context, _browserUri),
+              ),
+              const SizedBox(height: 8),
+              _MapOption(
+                icon: Icons.navigation_outlined,
+                title: 'Abrir no Waze',
+                onTap: () => _launch(context, _wazeUri),
+              ),
+              const SizedBox(height: 8),
+              _MapOption(
+                icon: Icons.map_outlined,
+                title: 'Abrir no Google Maps',
+                onTap: () =>
+                    _launch(context, _googleMapsUri, fallback: _browserUri),
+              ),
+            ],
           ),
         ),
-        SizedBox(width: 5 * scale),
-        Icon(
-          Icons.open_in_new,
-          size: 10 * scale,
-          color: const Color(0xff0019E5),
+      ),
+    );
+  }
+
+  static Future<void> _launch(
+    BuildContext context,
+    Uri uri, {
+    Uri? fallback,
+  }) async {
+    Navigator.of(context).pop();
+
+    final target = await canLaunchUrl(uri) ? uri : fallback;
+    if (target == null ||
+        !await launchUrl(target, mode: LaunchMode.externalApplication)) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Nao foi possivel abrir o mapa.')),
+        );
+    }
+  }
+}
+
+class _MapOption extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  const _MapOption({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xffFDFDFD),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: const Color(0xffF0F2F5), width: 0.8),
         ),
-      ],
+        child: Row(
+          children: [
+            const SizedBox(width: 12),
+            Icon(icon, color: ContactPage.iconBlue, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xff616779),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 1,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -577,9 +710,7 @@ class _ScheduleCard extends StatelessWidget {
     final double scale = _Responsive.scale(context);
 
     return Container(
-      constraints: BoxConstraints(
-        minHeight: 52 * scale,
-      ),
+      constraints: BoxConstraints(minHeight: 52 * scale),
       width: double.infinity,
       padding: EdgeInsets.symmetric(
         horizontal: 14 * scale,
@@ -641,10 +772,7 @@ class _ScheduleCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xffECF7EF),
               borderRadius: BorderRadius.circular(9 * scale),
-              border: Border.all(
-                color: const Color(0xffF5FAF6),
-                width: 0.8,
-              ),
+              border: Border.all(color: const Color(0xffF5FAF6), width: 0.8),
             ),
             child: Text(
               'Aberto agora',
@@ -710,9 +838,6 @@ BoxDecoration _cardDecoration(double scale) {
   return BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.circular(4 * scale),
-    border: Border.all(
-      color: const Color(0xffF7F9FB),
-      width: 1.2 * scale,
-    ),
+    border: Border.all(color: const Color(0xffF7F9FB), width: 1.2 * scale),
   );
 }

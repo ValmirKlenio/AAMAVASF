@@ -227,160 +227,178 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xffF5F5F5),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const WaveHeader(),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                const WaveHeader(),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
 
-                  Image.asset(
-                    'assets/images/logo.png',
-                    width: 260,
-                    height: 110,
-                    fit: BoxFit.contain,
+                      Image.asset(
+                        'assets/images/logo.png',
+                        width: 260,
+                        height: 110,
+                        fit: BoxFit.contain,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      const Text(
+                        'AAMAVASF',
+                        style: TextStyle(
+                          fontSize: 39.44,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xff1634C1),
+                          height: 1,
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      const Text(
+                        'ASSOCIACAO DE AMIGOS DO AUTISTA',
+                        style: TextStyle(
+                          fontSize: 12.27,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xff5D68CB),
+                          height: 1,
+                        ),
+                      ),
+
+                      const SizedBox(height: 2),
+
+                      const Text(
+                        'DO VALE DO SAO FRANCISCO',
+                        style: TextStyle(
+                          fontSize: 12.27,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xff5764CC),
+                          height: 1,
+                        ),
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      CustomTextField(
+                        hintText: 'Nome completo',
+                        icon: Icons.person_outline,
+                        controller: _nomeController,
+                        enabled: !_isLoading,
+                        textInputAction: TextInputAction.next,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      CustomTextField(
+                        hintText: 'E-mail',
+                        icon: Icons.email_outlined,
+                        controller: _emailController,
+                        enabled: !_isLoading,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      CustomTextField(
+                        hintText: 'CPF',
+                        icon: Icons.badge_outlined,
+                        controller: _cpfController,
+                        enabled: !_isLoading,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      CustomTextField(
+                        hintText: 'Telefone',
+                        icon: Icons.phone_outlined,
+                        controller: _telefoneController,
+                        enabled: !_isLoading,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      CustomTextField(
+                        hintText: 'Senha',
+                        icon: Icons.lock_outline,
+                        isPassword: true,
+                        controller: _senhaController,
+                        enabled: !_isLoading,
+                        textInputAction: TextInputAction.next,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      CustomTextField(
+                        hintText: 'Confirme sua senha',
+                        icon: Icons.lock_outline,
+                        isPassword: true,
+                        controller: _confirmarSenhaController,
+                        enabled: !_isLoading,
+                        textInputAction: TextInputAction.next,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      CustomTextField(
+                        hintText: 'Nome do dependente',
+                        icon: Icons.child_care_outlined,
+                        controller: _nomeDependenteController,
+                        enabled: !_isLoading,
+                        textInputAction: TextInputAction.next,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      CustomTextField(
+                        hintText: 'Nascimento do dependente (YYYY-MM-DD)',
+                        icon: Icons.calendar_today_outlined,
+                        controller: _dataNascDepController,
+                        enabled: !_isLoading,
+                        keyboardType: TextInputType.datetime,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _registrar(),
+                      ),
+
+                      const SizedBox(height: 34),
+
+                      PrimaryButton(
+                        text: _isLoading ? 'Cadastrando...' : 'Cadastrar',
+                        onPressed: _registrar,
+                      ),
+
+                      const SizedBox(height: 20),
+                    ],
                   ),
-
-                  const SizedBox(height: 8),
-
-                  const Text(
-                    'AAMAVASF',
-                    style: TextStyle(
-                      fontSize: 39.44,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xff1634C1),
-                      height: 1,
-                    ),
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  const Text(
-                    'ASSOCIACAO DE AMIGOS DO AUTISTA',
-                    style: TextStyle(
-                      fontSize: 12.27,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xff5D68CB),
-                      height: 1,
-                    ),
-                  ),
-
-                  const SizedBox(height: 2),
-
-                  const Text(
-                    'DO VALE DO SAO FRANCISCO',
-                    style: TextStyle(
-                      fontSize: 12.27,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xff5764CC),
-                      height: 1,
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  CustomTextField(
-                    hintText: 'Nome',
-                    icon: Icons.person_outline,
-                    controller: _nomeController,
-                    enabled: !_isLoading,
-                    textInputAction: TextInputAction.next,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  CustomTextField(
-                    hintText: 'E-mail',
-                    icon: Icons.email_outlined,
-                    controller: _emailController,
-                    enabled: !_isLoading,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  CustomTextField(
-                    hintText: 'CPF',
-                    icon: Icons.badge_outlined,
-                    controller: _cpfController,
-                    enabled: !_isLoading,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.next,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  CustomTextField(
-                    hintText: 'Telefone',
-                    icon: Icons.phone_outlined,
-                    controller: _telefoneController,
-                    enabled: !_isLoading,
-                    keyboardType: TextInputType.phone,
-                    textInputAction: TextInputAction.next,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  CustomTextField(
-                    hintText: 'Senha',
-                    icon: Icons.lock_outline,
-                    isPassword: true,
-                    controller: _senhaController,
-                    enabled: !_isLoading,
-                    textInputAction: TextInputAction.next,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  CustomTextField(
-                    hintText: 'Confirme sua senha',
-                    icon: Icons.lock_outline,
-                    isPassword: true,
-                    controller: _confirmarSenhaController,
-                    enabled: !_isLoading,
-                    textInputAction: TextInputAction.next,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  CustomTextField(
-                    hintText: 'Nome do dependente',
-                    icon: Icons.child_care_outlined,
-                    controller: _nomeDependenteController,
-                    enabled: !_isLoading,
-                    textInputAction: TextInputAction.next,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  CustomTextField(
-                    hintText: 'Nascimento do dependente (YYYY-MM-DD)',
-                    icon: Icons.calendar_today_outlined,
-                    controller: _dataNascDepController,
-                    enabled: !_isLoading,
-                    keyboardType: TextInputType.datetime,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _registrar(),
-                  ),
-
-                  const SizedBox(height: 34),
-
-                  PrimaryButton(
-                    text: _isLoading ? 'Cadastrando...' : 'Cadastrar',
-                    onPressed: _registrar,
-                  ),
-
-                  const SizedBox(height: 20),
-                ],
+                ),
+              ],
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 12, top: 8),
+              child: IconButton(
+                onPressed: _isLoading
+                    ? null
+                    : () => Navigator.pushReplacementNamed(
+                        context,
+                        AppRoutes.login,
+                      ),
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

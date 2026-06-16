@@ -42,7 +42,17 @@ class Usuario {
       return 'Usuário';
     }
 
-    return partes.first;
+    return _capitalize(partes.first);
+  }
+
+  static String _capitalize(String value) {
+    final cleanValue = value.trim();
+
+    if (cleanValue.isEmpty) {
+      return cleanValue;
+    }
+
+    return cleanValue[0].toUpperCase() + cleanValue.substring(1).toLowerCase();
   }
 
   static int _asInt(dynamic value) {
