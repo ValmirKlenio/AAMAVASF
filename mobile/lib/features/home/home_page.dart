@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:mobile/core/widgets/bottom_menu.dart';
+import 'package:mobile/core/widgets/notification_card.dart';
 import 'package:mobile/core/widgets/wave_header.dart';
 
 class HomePage extends StatelessWidget {
@@ -236,13 +237,11 @@ class _HomeHeader extends StatelessWidget {
           Positioned(
             top: topSafe + (13 * scale),
             right: 24 * scale,
-            child: Icon(
-              Icons.notifications_none,
-              color: Colors.white,
-              size: 24 * scale,
+            child: NotificationBellButton(
+              scale: scale,
             ),
           ),
-          
+
           Positioned(
             right: -35 * scale,
             top: topSafe + (68 * scale),
