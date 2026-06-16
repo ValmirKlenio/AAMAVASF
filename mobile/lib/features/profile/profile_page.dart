@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/widgets/bottom_menu.dart';
+import '../../core/widgets/notification_card.dart';
 import '../../core/widgets/wave_header.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -258,13 +259,11 @@ class _ProfileTopSection extends StatelessWidget {
                 Positioned(
                   top: topSafe + (13 * scale),
                   right: 24 * scale,
-                  child: Icon(
-                    Icons.notifications_none,
-                    color: Colors.white,
-                    size: 24 * scale,
+                  child: NotificationBellButton(
+                    scale: scale,
                   ),
                 ),
-                
+
                 Positioned(
                   right: -35 * scale,
                   top: topSafe + (68 * scale),

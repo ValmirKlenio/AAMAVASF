@@ -7,6 +7,7 @@ import '../../features/home/home_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/services/services_page.dart';
 import '../../features/splash/splash_page.dart';
+import '../../features/agenda/agenda_page.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -40,6 +41,10 @@ class AppPages {
 
       case AppRoutes.profile:
         page = const ProfilePage();
+        break;
+
+      case AppRoutes.agenda:
+        page = const AgendaPage();
         break;
 
       default:

@@ -22,7 +22,7 @@ class BottomMenu extends StatelessWidget {
         break;
 
       case 2:
-        // Agenda
+        Navigator.pushReplacementNamed(context, AppRoutes.agenda);
         break;
 
       case 3:
