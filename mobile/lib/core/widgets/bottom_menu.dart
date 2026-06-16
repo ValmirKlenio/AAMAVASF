@@ -18,7 +18,7 @@ class BottomMenu extends StatelessWidget {
         break;
 
       case 1:
-        // Serviços
+        Navigator.pushReplacementNamed(context, AppRoutes.services);
         break;
 
       case 2:
@@ -30,7 +30,7 @@ class BottomMenu extends StatelessWidget {
         break;
 
       case 4:
-        // Perfil
+        Navigator.pushReplacementNamed(context, AppRoutes.profile);
         break;
     }
   }

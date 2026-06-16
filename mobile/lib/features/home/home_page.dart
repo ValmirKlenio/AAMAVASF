@@ -1,89 +1,103 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
 import 'package:mobile/core/widgets/bottom_menu.dart';
 import 'package:mobile/core/widgets/wave_header.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
+  static const Color primaryBlue = Color(0xff012A9F);
+  static const Color background = Color(0xffF6F8FC);
+
   @override
   Widget build(BuildContext context) {
     final double scale = _Responsive.scale(context);
     final double horizontalPadding = _Responsive.horizontalPadding(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xffF6F8FC),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const _HomeHeader(),
-
-            SizedBox(height: 14 * scale),
-
-            const _InfoBanner(),
-
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: 8 * scale),
-
-                  const _SectionTitle(
-                    title: 'Acesso rápido',
-                  ),
-
-                  SizedBox(height: 10 * scale),
-
-                  const _QuickAccessGrid(),
-
-                  SizedBox(height: 18 * scale),
-
-                  const _EventsHeader(),
-
-                  SizedBox(height: 10 * scale),
-
-                  const _EventCard(
-                    date: '25 MAI',
-                    title: 'Oficina de Habilidades Sociais',
-                    time: '09:00-11:00',
-                    status: 'Inscrever-se',
-                    iconColor: Color(0xff0047FF),
-                  ),
-
-                  const _EventCard(
-                    date: '02 JUN',
-                    title: 'Roda de Pais e Responsáveis',
-                    time: '19:00-20:30',
-                    status: 'Inscrever-se',
-                    iconColor: Color(0xff00C853),
-                  ),
-
-                  const _EventCard(
-                    date: '10 JUN',
-                    title: 'Palestra de conscientização',
-                    time: '10:00-11:30',
-                    status: 'Inscrever-se',
-                    iconColor: Color(0xff00C853),
-                  ),
-
-                  const _EventCard(
-                    date: '15 JUN',
-                    title: 'Oficina de Habilidades Sociais',
-                    time: '17:00-19:00',
-                    status: 'Inscrever-se',
-                    iconColor: Color(0xff0047FF),
-                  ),
-
-                  SizedBox(height: 6 * scale),
-                ],
-              ),
-            ),
-          ],
-        ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.white,
+        systemStatusBarContrastEnforced: false,
       ),
-      bottomNavigationBar: const BottomMenu(
-        selectedIndex: 0,
+      child: Scaffold(
+        backgroundColor: background,
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              const _HomeHeader(),
+
+              SizedBox(height: 14 * scale),
+
+              const _InfoBanner(),
+
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 8 * scale),
+
+                    const _SectionTitle(
+                      title: 'Acesso rápido',
+                    ),
+
+                    SizedBox(height: 10 * scale),
+
+                    const _QuickAccessGrid(),
+
+                    SizedBox(height: 18 * scale),
+
+                    const _EventsHeader(),
+
+                    SizedBox(height: 10 * scale),
+
+                    const _EventCard(
+                      date: '25 MAI',
+                      title: 'Oficina de Habilidades Sociais',
+                      time: '09:00-11:00',
+                      status: 'Inscrever-se',
+                      iconColor: Color(0xff0047FF),
+                    ),
+
+                    const _EventCard(
+                      date: '02 JUN',
+                      title: 'Roda de Pais e Responsáveis',
+                      time: '19:00-20:30',
+                      status: 'Inscrever-se',
+                      iconColor: Color(0xff00C853),
+                    ),
+
+                    const _EventCard(
+                      date: '10 JUN',
+                      title: 'Palestra de conscientização',
+                      time: '10:00-11:30',
+                      status: 'Inscrever-se',
+                      iconColor: Color(0xff00C853),
+                    ),
+
+                    const _EventCard(
+                      date: '15 JUN',
+                      title: 'Oficina de Habilidades Sociais',
+                      time: '17:00-19:00',
+                      status: 'Inscrever-se',
+                      iconColor: Color(0xff0047FF),
+                    ),
+
+                    SizedBox(height: 6 * scale),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: const BottomMenu(
+          selectedIndex: 0,
+        ),
       ),
     );
   }
@@ -147,7 +161,7 @@ class _HomeHeader extends StatelessWidget {
 
     return WaveHeader(
       height: headerHeight,
-      backgroundColor: const Color(0xff012A9F),
+      backgroundColor: HomePage.primaryBlue,
       child: Stack(
         children: [
           Positioned(
@@ -228,30 +242,7 @@ class _HomeHeader extends StatelessWidget {
               size: 24 * scale,
             ),
           ),
-
-          Positioned(
-            top: topSafe + (9 * scale),
-            right: 21 * scale,
-            child: Container(
-              width: 13 * scale,
-              height: 13 * scale,
-              decoration: const BoxDecoration(
-                color: Color(0xffFF2001),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  '3',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 8 * scale,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
+          
           Positioned(
             right: -35 * scale,
             top: topSafe + (68 * scale),

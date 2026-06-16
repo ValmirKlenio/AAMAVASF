@@ -4,6 +4,8 @@ import '../../features/auth/login/login_page.dart';
 import '../../features/auth/register/register_page.dart';
 import '../../features/contact/contact_page.dart';
 import '../../features/home/home_page.dart';
+import '../../features/profile/profile_page.dart';
+import '../../features/services/services_page.dart';
 import '../../features/splash/splash_page.dart';
 import 'app_routes.dart';
 
@@ -28,8 +30,16 @@ class AppPages {
         page = const HomePage();
         break;
 
+      case AppRoutes.services:
+        page = const ServicesPage();
+        break;
+
       case AppRoutes.contact:
         page = const ContactPage();
+        break;
+
+      case AppRoutes.profile:
+        page = const ProfilePage();
         break;
 
       default:

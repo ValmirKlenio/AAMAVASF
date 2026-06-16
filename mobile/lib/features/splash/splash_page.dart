@@ -168,7 +168,7 @@ class _SplashPageState extends State<SplashPage>
                 ),
 
                 Positioned(
-                  top: h(545),
+                  top: h(560),
                   left: w(165),
                   child: ClipPath(
                     clipper: _WaveShadowClipper(),

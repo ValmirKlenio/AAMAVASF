@@ -22,9 +22,11 @@ class ContactPage extends StatelessWidget {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-        statusBarColor: primaryBlue,
+        statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
         systemNavigationBarColor: Colors.white,
+        systemStatusBarContrastEnforced: false,
       ),
       child: Scaffold(
         backgroundColor: background,
@@ -187,28 +189,7 @@ class _ContactHeader extends StatelessWidget {
               size: 24 * scale,
             ),
           ),
-          Positioned(
-            top: topSafe + (9 * scale),
-            right: 21 * scale,
-            child: Container(
-              width: 13 * scale,
-              height: 13 * scale,
-              decoration: const BoxDecoration(
-                color: Color(0xffFF2001),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  '3',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 8 * scale,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          
           Positioned(
             right: -35 * scale,
             top: topSafe + (68 * scale),
