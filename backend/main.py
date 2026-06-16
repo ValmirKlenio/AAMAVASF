@@ -7,12 +7,12 @@ from typing import List
 from models import Usuario, Agendamento, HorarioDisponivel, Servico, Notificacao, StatusAgendamento, CategoriaServico ,TipoUsuario
 from dependencies import (
     get_db, get_password_hash, authenticate_user, create_access_token,
-    get_current_user, get_current_admin, ACCESS_TOKEN_EXPIRE_MINUTES
+    get_current_user, get_current_admin, ACCESS_TOKEN_EXPIRE_MINUTES, verify_password
 )
 from schemas import (
     UsuarioCreate, UsuarioResponse, Token, ServicoCreate, ServicoResponse,
     HorarioCreate, HorarioResponse, AgendamentoCreate, AgendamentoResponse,
-    NotificacaoResponse
+    NotificacaoResponse, AlterarSenhaSchema
 )
 
 app = FastAPI(title="AAMAVASF API")
@@ -260,6 +260,39 @@ def marcar_notificacao_lida(notificacao_id: int, current_user: Usuario = Depends
     db.commit()
     return {"message": "Notificação marcada como lida"}
 
+# =========== Alterar senha ==========
+@app.post("/usuarios/alterar-senha")
+def alterar_senha(
+    dados: AlterarSenhaSchema,
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Verifica se a senha atual está correta
+    if not verify_password(dados.senha_atual, current_user.senha_hash):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+    
+    # Validação básica da nova senha (ex: mínimo 6 caracteres)
+    if len(dados.nova_senha) < 6:
+        raise HTTPException(status_code=400, detail="A nova senha deve ter pelo menos 6 caracteres")
+    
+    # Gera o hash da nova senha
+    nova_senha_hash = get_password_hash(dados.nova_senha)
+    
+    # Atualiza no banco
+    current_user.senha_hash = nova_senha_hash
+    db.commit()
+    
+    # (Opcional) Cria uma notificação de segurança
+    notif = Notificacao(
+        titulo="Senha alterada",
+        mensagem="Sua senha foi alterada com sucesso.",
+        usuario_id=current_user.id,
+        tipo="seguranca"
+    )
+    db.add(notif)
+    db.commit()
+    
+    return {"message": "Senha alterada com sucesso"}
 
 # ========== Health Check ==========
 @app.get("/")

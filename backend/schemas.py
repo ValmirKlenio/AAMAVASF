@@ -105,3 +105,7 @@ class NotificacaoResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AlterarSenhaSchema(BaseModel):
+    senha_atual: str
+    nova_senha: str
