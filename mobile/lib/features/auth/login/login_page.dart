@@ -2,16 +2,83 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile/features/auth/login/widgets/social_login_widget.dart';
 
+import '../../../../auth_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/wave_header.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   static const Color background = Color(0xffF5F5F5);
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final AuthService _authService = AuthService();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _senhaController = TextEditingController();
+
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _senhaController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    if (_isLoading) {
+      return;
+    }
+
+    final email = _emailController.text.trim();
+    final senha = _senhaController.text;
+
+    if (email.isEmpty || senha.isEmpty) {
+      _showMessage('Informe e-mail e senha para continuar.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.login(email, senha);
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    } on AuthException catch (error) {
+      if (mounted) {
+        _showMessage(error.message);
+      }
+    } on Object {
+      if (mounted) {
+        _showMessage('Não foi possível fazer login. Tente novamente.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +94,7 @@ class LoginPage extends StatelessWidget {
         systemNavigationBarContrastEnforced: false,
       ),
       child: Scaffold(
-        backgroundColor: background,
+        backgroundColor: LoginPage.background,
         body: SingleChildScrollView(
           child: Column(
             children: [
@@ -84,10 +151,7 @@ class LoginPage extends StatelessWidget {
 
                     const SizedBox(height: 24),
 
-                    const Text(
-                      'Bem-vindo(a)!',
-                      style: AppTextStyles.title,
-                    ),
+                    const Text('Bem-vindo(a)!', style: AppTextStyles.title),
 
                     const SizedBox(height: 8),
 
@@ -98,17 +162,25 @@ class LoginPage extends StatelessWidget {
 
                     const SizedBox(height: 28),
 
-                    const CustomTextField(
-                      hintText: 'E-mail ou CPF',
+                    CustomTextField(
+                      hintText: 'E-mail',
                       icon: Icons.person_outline,
+                      controller: _emailController,
+                      enabled: !_isLoading,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
                     ),
 
                     const SizedBox(height: 14),
 
-                    const CustomTextField(
+                    CustomTextField(
                       hintText: 'Senha',
                       icon: Icons.lock_outline,
                       isPassword: true,
+                      controller: _senhaController,
+                      enabled: !_isLoading,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _login(),
                     ),
 
                     Align(
@@ -128,10 +200,8 @@ class LoginPage extends StatelessWidget {
                     const SizedBox(height: 10),
 
                     PrimaryButton(
-                      text: 'Entrar',
-                      onPressed: () {
-                        Navigator.pushNamed(context, AppRoutes.home);
-                      },
+                      text: _isLoading ? 'Entrando...' : 'Entrar',
+                      onPressed: _login,
                     ),
 
                     const SizedBox(height: 30),
@@ -145,9 +215,7 @@ class LoginPage extends StatelessWidget {
                       children: [
                         const Text(
                           'Ainda não tem uma conta?',
-                          style: TextStyle(
-                            color: Color(0xff9DA0A6),
-                          ),
+                          style: TextStyle(color: Color(0xff9DA0A6)),
                         ),
                         TextButton(
                           onPressed: () {

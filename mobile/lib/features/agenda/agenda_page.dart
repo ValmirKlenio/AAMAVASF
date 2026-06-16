@@ -4,12 +4,77 @@ import 'package:flutter/services.dart';
 import '../../core/widgets/bottom_menu.dart';
 import '../../core/widgets/notification_card.dart';
 import '../../core/widgets/wave_header.dart';
+import '../services/models/servico.dart';
+import '../services/repositories/servicos_repository.dart';
+import '../services/widgets/service_booking_sheet.dart';
+import 'models/agendamento.dart';
+import 'repositories/agenda_repository.dart';
 
-class AgendaPage extends StatelessWidget {
+class AgendaPage extends StatefulWidget {
   const AgendaPage({super.key});
 
   static const Color primaryBlue = Color(0xff012A9F);
   static const Color background = Color(0xffF6F8FC);
+
+  @override
+  State<AgendaPage> createState() => _AgendaPageState();
+}
+
+class _AgendaPageState extends State<AgendaPage> {
+  final AgendaRepository _agendaRepository = AgendaRepository();
+  late Future<List<Agendamento>> _agendamentosFuture;
+  late DateTime _focusedMonth;
+  late DateTime _selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _focusedMonth = DateTime(now.year, now.month);
+    _selectedDate = DateTime(now.year, now.month, now.day);
+    _loadAgendamentos();
+  }
+
+  void _loadAgendamentos() {
+    _agendamentosFuture = _agendaRepository.listarAgendamentos();
+  }
+
+  void _selectDate(DateTime date) {
+    setState(() {
+      _selectedDate = date;
+      _focusedMonth = DateTime(date.year, date.month);
+    });
+  }
+
+  void _changeMonth(int offset) {
+    setState(() {
+      _focusedMonth = DateTime(
+        _focusedMonth.year,
+        _focusedMonth.month + offset,
+      );
+      _selectedDate = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
+    });
+  }
+
+  Future<void> _openAddCommitmentFlow() async {
+    final service = await showModalBottomSheet<Servico>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _SelectServiceSheet(),
+    );
+
+    if (!mounted || service == null) {
+      return;
+    }
+
+    final scheduled = await showServiceBookingSheet(context, service: service);
+    if (!mounted || scheduled != true) {
+      return;
+    }
+
+    setState(_loadAgendamentos);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +93,7 @@ class AgendaPage extends StatelessWidget {
         systemNavigationBarContrastEnforced: false,
       ),
       child: Scaffold(
-        backgroundColor: background,
+        backgroundColor: AgendaPage.background,
         body: ScrollConfiguration(
           behavior: const _NoPullScrollBehavior(),
           child: SingleChildScrollView(
@@ -47,63 +112,46 @@ class AgendaPage extends StatelessWidget {
 
                       SizedBox(height: 10 * scale),
 
-                      const _CalendarCard(),
+                      FutureBuilder<List<Agendamento>>(
+                        future: _agendamentosFuture,
+                        builder: (context, snapshot) {
+                          final agendamentos =
+                              snapshot.data ?? const <Agendamento>[];
+                          final error = snapshot.hasError
+                              ? snapshot.error
+                              : null;
 
-                      SizedBox(height: 14 * scale),
+                          return Column(
+                            children: [
+                              _CalendarCard(
+                                focusedMonth: _focusedMonth,
+                                selectedDate: _selectedDate,
+                                agendamentos: agendamentos,
+                                onDaySelected: _selectDate,
+                                onPreviousMonth: () => _changeMonth(-1),
+                                onNextMonth: () => _changeMonth(1),
+                              ),
 
-                      const _EventsDayHeader(),
+                              SizedBox(height: 14 * scale),
 
-                      SizedBox(height: 8 * scale),
+                              _EventsDayHeader(selectedDate: _selectedDate),
 
-                      const _AgendaEventCard(
-                        time: '09:00-11:00',
-                        title: 'Oficina de Habilidades Sociais',
-                        description:
-                            'Atividade em grupo para desenvolvimento\nde interação e comunicação.',
-                        status: 'Inscrito',
-                        icon: Icons.groups_2_outlined,
-                        iconColor: Color(0xff000CDB),
-                        iconBackground: Color(0xffE5E9FB),
-                        statusBackground: Color(0xffEFF2FD),
-                        statusColor: Color(0xff6176DA),
-                        leftBorderColor: Color(0xff001FE4),
+                              SizedBox(height: 8 * scale),
+
+                              _AgendaEventsList(
+                                selectedDate: _selectedDate,
+                                agendamentos: agendamentos,
+                                isLoading:
+                                    snapshot.connectionState !=
+                                    ConnectionState.done,
+                                error: error,
+                              ),
+                            ],
+                          );
+                        },
                       ),
 
-                      SizedBox(height: 8 * scale),
-
-                      const _AgendaEventCard(
-                        time: '14:00-15:30',
-                        title: 'Roda de Conversa com Pais',
-                        description:
-                            'Espaço de diálogo e troca de experiências\nentre pais e responsáveis.',
-                        status: 'Inscrito',
-                        icon: Icons.record_voice_over_outlined,
-                        iconColor: Color(0xff01A621),
-                        iconBackground: Color(0xffE3F5E3),
-                        statusBackground: Color(0xffE3F5E3),
-                        statusColor: Color(0xff61B872),
-                        leftBorderColor: Color(0xff00A425),
-                      ),
-
-                      SizedBox(height: 8 * scale),
-
-                      const _AgendaEventCard(
-                        time: '16:00-17:30',
-                        title: 'Terapia Ocupacional',
-                        description:
-                            'Sessão terapêutica focada na autonomia\ne coordenação motora.',
-                        status: 'Pendente',
-                        icon: Icons.volunteer_activism_outlined,
-                        iconColor: Color(0xffFFA600),
-                        iconBackground: Color(0xffFFF4E0),
-                        statusBackground: Color(0xffFDF6E5),
-                        statusColor: Color(0xffFDBA4A),
-                        leftBorderColor: Color(0xffFFB102),
-                      ),
-
-                      SizedBox(height: 14 * scale),
-
-                      const _AddCommitmentButton(),
+                      _AddCommitmentButton(onTap: _openAddCommitmentFlow),
 
                       SizedBox(height: 24 * scale),
                     ],
@@ -113,9 +161,7 @@ class AgendaPage extends StatelessWidget {
             ),
           ),
         ),
-        bottomNavigationBar: const BottomMenu(
-          selectedIndex: 2,
-        ),
+        bottomNavigationBar: const BottomMenu(selectedIndex: 2),
       ),
     );
   }
@@ -165,6 +211,40 @@ class _Responsive {
   }
 }
 
+String _dateKey(DateTime date) {
+  final year = date.year.toString().padLeft(4, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+
+  return '$year-$month-$day';
+}
+
+bool _sameDate(DateTime first, DateTime second) {
+  return first.year == second.year &&
+      first.month == second.month &&
+      first.day == second.day;
+}
+
+Color _colorFromHex(String? value) {
+  final hex = value?.replaceAll('#', '').trim();
+
+  if (hex == null || hex.length != 6) {
+    return const Color(0xff0029E0);
+  }
+
+  final parsed = int.tryParse(hex, radix: 16);
+
+  if (parsed == null) {
+    return const Color(0xff0029E0);
+  }
+
+  return Color(0xff000000 | parsed);
+}
+
+Color _lightBackground(Color color) {
+  return Color.lerp(Colors.white, color, 0.12) ?? const Color(0xffEFF2FD);
+}
+
 class _AgendaHeader extends StatelessWidget {
   const _AgendaHeader();
 
@@ -176,12 +256,13 @@ class _AgendaHeader extends StatelessWidget {
 
     final double topSafe = MediaQuery.of(context).padding.top;
 
-    final double headerHeight = topSafe +
+    final double headerHeight =
+        topSafe +
         (isVerySmallScreen
             ? 168 * scale
             : isSmallScreen
-                ? 176 * scale
-                : 188 * scale);
+            ? 176 * scale
+            : 188 * scale);
 
     return WaveHeader(
       height: headerHeight,
@@ -246,9 +327,7 @@ class _AgendaHeader extends StatelessWidget {
           Positioned(
             top: topSafe + (13 * scale),
             right: 24 * scale,
-            child: NotificationBellButton(
-              scale: scale,
-            ),
+            child: NotificationBellButton(scale: scale),
           ),
         ],
       ),
@@ -335,7 +414,21 @@ class _TabsCard extends StatelessWidget {
 }
 
 class _CalendarCard extends StatelessWidget {
-  const _CalendarCard();
+  final DateTime focusedMonth;
+  final DateTime selectedDate;
+  final List<Agendamento> agendamentos;
+  final ValueChanged<DateTime> onDaySelected;
+  final VoidCallback onPreviousMonth;
+  final VoidCallback onNextMonth;
+
+  const _CalendarCard({
+    required this.focusedMonth,
+    required this.selectedDate,
+    required this.agendamentos,
+    required this.onDaySelected,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -352,25 +445,25 @@ class _CalendarCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xffFEFEFE),
         borderRadius: BorderRadius.circular(5 * scale),
-        border: Border.all(
-          color: const Color(0xffF9FBFD),
-          width: 2.42 * scale,
-        ),
+        border: Border.all(color: const Color(0xffF9FBFD), width: 2.42 * scale),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              Icon(
-                Icons.chevron_left,
-                size: 18 * scale,
-                color: const Color(0xffA7AAB3),
+              GestureDetector(
+                onTap: onPreviousMonth,
+                child: Icon(
+                  Icons.chevron_left,
+                  size: 18 * scale,
+                  color: const Color(0xffA7AAB3),
+                ),
               ),
 
               const Spacer(),
 
               Text(
-                'Maio 2024',
+                _formatMonth(focusedMonth),
                 style: TextStyle(
                   color: const Color(0xff5D72D9),
                   fontSize: 10 * scale,
@@ -380,10 +473,13 @@ class _CalendarCard extends StatelessWidget {
 
               const Spacer(),
 
-              Icon(
-                Icons.chevron_right,
-                size: 18 * scale,
-                color: const Color(0xffA7AAB3),
+              GestureDetector(
+                onTap: onNextMonth,
+                child: Icon(
+                  Icons.chevron_right,
+                  size: 18 * scale,
+                  color: const Color(0xffA7AAB3),
+                ),
               ),
             ],
           ),
@@ -394,10 +490,34 @@ class _CalendarCard extends StatelessWidget {
 
           SizedBox(height: 10 * scale),
 
-          const _CalendarGrid(),
+          _CalendarGrid(
+            focusedMonth: focusedMonth,
+            selectedDate: selectedDate,
+            agendamentos: agendamentos,
+            onDaySelected: onDaySelected,
+          ),
         ],
       ),
     );
+  }
+
+  String _formatMonth(DateTime date) {
+    const months = [
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro',
+    ];
+
+    return '${months[date.month - 1]} ${date.year}';
   }
 }
 
@@ -419,8 +539,9 @@ class _CalendarWeekDays extends StatelessWidget {
             child: Text(
               days[index],
               style: TextStyle(
-                color:
-                    weekend ? const Color(0xffFF5A5A) : const Color(0xff9EA2AD),
+                color: weekend
+                    ? const Color(0xffFF5A5A)
+                    : const Color(0xff9EA2AD),
                 fontSize: 7.6 * scale,
                 fontWeight: FontWeight.w600,
               ),
@@ -433,68 +554,59 @@ class _CalendarWeekDays extends StatelessWidget {
 }
 
 class _CalendarGrid extends StatelessWidget {
-  const _CalendarGrid();
+  final DateTime focusedMonth;
+  final DateTime selectedDate;
+  final List<Agendamento> agendamentos;
+  final ValueChanged<DateTime> onDaySelected;
+
+  const _CalendarGrid({
+    required this.focusedMonth,
+    required this.selectedDate,
+    required this.agendamentos,
+    required this.onDaySelected,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final List<int?> days = [
-      null,
-      null,
-      null,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24,
-      25,
-      26,
-      27,
-      28,
-      29,
-      30,
-      31,
-      null,
-    ];
+    final firstDay = DateTime(focusedMonth.year, focusedMonth.month);
+    final daysInMonth = DateTime(
+      focusedMonth.year,
+      focusedMonth.month + 1,
+      0,
+    ).day;
+    final firstWeekdayIndex = firstDay.weekday % 7;
+    final totalCells = firstWeekdayIndex + daysInMonth;
+    final rowCount = (totalCells / 7).ceil();
+    final agendamentosByDate = _groupAgendamentosByDate(agendamentos);
 
     return Column(
-      children: List.generate(5, (row) {
+      children: List.generate(rowCount, (row) {
         return Padding(
           padding: EdgeInsets.only(
-            bottom: row == 4 ? 0 : 10 * _Responsive.scale(context),
+            bottom: row == rowCount - 1 ? 0 : 10 * _Responsive.scale(context),
           ),
           child: Row(
             children: List.generate(7, (col) {
               final int index = row * 7 + col;
-              final int? day = days[index];
+              final int dayNumber = index - firstWeekdayIndex + 1;
+              final bool isMuted = dayNumber < 1 || dayNumber > daysInMonth;
+              final date = DateTime(
+                focusedMonth.year,
+                focusedMonth.month,
+                isMuted ? 1 : dayNumber,
+              );
+              final colors = isMuted
+                  ? const <Color>[]
+                  : _dotColors(agendamentosByDate[_dateKey(date)] ?? []);
 
               return Expanded(
                 child: _CalendarDay(
-                  day: day,
-                  isSelected: day == 15,
-                  hasBlueDot: day == 15 || day == 21,
-                  hasGreenDot: day == 15 || day == 25,
-                  hasOrangeDot: day == 15,
+                  day: isMuted ? null : dayNumber,
+                  isSelected: _sameDate(date, selectedDate),
+                  dotColors: colors,
                   isWeekend: col == 0 || col == 6,
-                  isMuted: day == null,
+                  isMuted: isMuted,
+                  onTap: isMuted ? null : () => onDaySelected(date),
                 ),
               );
             }),
@@ -503,25 +615,43 @@ class _CalendarGrid extends StatelessWidget {
       }),
     );
   }
+
+  Map<String, List<Agendamento>> _groupAgendamentosByDate(
+    List<Agendamento> agendamentos,
+  ) {
+    final grouped = <String, List<Agendamento>>{};
+
+    for (final agendamento in agendamentos) {
+      grouped.putIfAbsent(agendamento.dataKey, () => []).add(agendamento);
+    }
+
+    return grouped;
+  }
+
+  List<Color> _dotColors(List<Agendamento> agendamentos) {
+    return agendamentos
+        .map((agendamento) => _colorFromHex(agendamento.categoriaCor))
+        .toSet()
+        .take(3)
+        .toList();
+  }
 }
 
 class _CalendarDay extends StatelessWidget {
   final int? day;
   final bool isSelected;
-  final bool hasBlueDot;
-  final bool hasGreenDot;
-  final bool hasOrangeDot;
+  final List<Color> dotColors;
   final bool isWeekend;
   final bool isMuted;
+  final VoidCallback? onTap;
 
   const _CalendarDay({
     required this.day,
     required this.isSelected,
-    required this.hasBlueDot,
-    required this.hasGreenDot,
-    required this.hasOrangeDot,
+    required this.dotColors,
     required this.isWeekend,
     required this.isMuted,
+    required this.onTap,
   });
 
   @override
@@ -532,80 +662,62 @@ class _CalendarDay extends StatelessWidget {
       return SizedBox(height: 30 * scale);
     }
 
-    return SizedBox(
-      height: 30 * scale,
-      child: Center(
-        child: Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            if (isSelected)
-              Container(
-                width: 27 * scale,
-                height: 27 * scale,
-                decoration: const BoxDecoration(
-                  color: Color(0xff0029E0),
-                  shape: BoxShape.circle,
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        height: 30 * scale,
+        child: Center(
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              if (isSelected)
+                Container(
+                  width: 27 * scale,
+                  height: 27 * scale,
+                  decoration: const BoxDecoration(
+                    color: Color(0xff0029E0),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+
+              Text(
+                '$day',
+                style: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : isWeekend
+                      ? const Color(0xffFF5A5A)
+                      : const Color(0xff4D525D),
+                  fontSize: 9 * scale,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
 
-            Text(
-              '$day',
-              style: TextStyle(
-                color: isSelected
-                    ? Colors.white
-                    : isWeekend
-                        ? const Color(0xffFF5A5A)
-                        : const Color(0xff4D525D),
-                fontSize: 9 * scale,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-
-            if (hasBlueDot || hasGreenDot || hasOrangeDot)
-              Positioned(
-                bottom: -5 * scale,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (hasBlueDot)
-                      Container(
-                        width: 4 * scale,
-                        height: 4 * scale,
-                        decoration: const BoxDecoration(
-                          color: Color(0xff0029E0),
-                          shape: BoxShape.circle,
+              if (dotColors.isNotEmpty)
+                Positioned(
+                  bottom: -5 * scale,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(dotColors.length, (index) {
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right: index == dotColors.length - 1 ? 0 : 3 * scale,
                         ),
-                      ),
-
-                    if (hasBlueDot && (hasGreenDot || hasOrangeDot))
-                      SizedBox(width: 3 * scale),
-
-                    if (hasGreenDot)
-                      Container(
-                        width: 4 * scale,
-                        height: 4 * scale,
-                        decoration: const BoxDecoration(
-                          color: Color(0xff01A621),
-                          shape: BoxShape.circle,
+                        child: Container(
+                          width: 4 * scale,
+                          height: 4 * scale,
+                          decoration: BoxDecoration(
+                            color: dotColors[index],
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-
-                    if (hasGreenDot && hasOrangeDot) SizedBox(width: 3 * scale),
-
-                    if (hasOrangeDot)
-                      Container(
-                        width: 4 * scale,
-                        height: 4 * scale,
-                        decoration: const BoxDecoration(
-                          color: Color(0xffFFA600),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                  ],
+                      );
+                    }),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -613,7 +725,9 @@ class _CalendarDay extends StatelessWidget {
 }
 
 class _EventsDayHeader extends StatelessWidget {
-  const _EventsDayHeader();
+  final DateTime selectedDate;
+
+  const _EventsDayHeader({required this.selectedDate});
 
   @override
   Widget build(BuildContext context) {
@@ -634,7 +748,7 @@ class _EventsDayHeader extends StatelessWidget {
         const Spacer(),
 
         Text(
-          'Quarta-feira,15 de Maio',
+          _formatSelectedDate(selectedDate),
           style: TextStyle(
             color: const Color(0xff5D72D9),
             fontSize: 9.68 * scale,
@@ -651,6 +765,166 @@ class _EventsDayHeader extends StatelessWidget {
           size: 14 * scale,
         ),
       ],
+    );
+  }
+
+  String _formatSelectedDate(DateTime date) {
+    const weekdays = [
+      'Segunda-feira',
+      'Terça-feira',
+      'Quarta-feira',
+      'Quinta-feira',
+      'Sexta-feira',
+      'Sábado',
+      'Domingo',
+    ];
+    const months = [
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro',
+    ];
+
+    return '${weekdays[date.weekday - 1]}, ${date.day} de ${months[date.month - 1]}';
+  }
+}
+
+class _AgendaEventsList extends StatelessWidget {
+  final DateTime selectedDate;
+  final List<Agendamento> agendamentos;
+  final bool isLoading;
+  final Object? error;
+
+  const _AgendaEventsList({
+    required this.selectedDate,
+    required this.agendamentos,
+    required this.isLoading,
+    required this.error,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double scale = _Responsive.scale(context);
+
+    if (isLoading) {
+      return SizedBox(
+        height: 73 * scale,
+        child: const Center(
+          child: CircularProgressIndicator(color: AgendaPage.primaryBlue),
+        ),
+      );
+    }
+
+    if (error != null) {
+      return _AgendaMessage(
+        message: error is AgendaRepositoryException
+            ? (error as AgendaRepositoryException).message
+            : 'Não foi possível carregar seus agendamentos.',
+      );
+    }
+
+    final selectedEvents = agendamentos
+        .where((agendamento) => _sameDate(agendamento.data, selectedDate))
+        .toList();
+
+    if (selectedEvents.isEmpty) {
+      return const _AgendaMessage(message: 'Nenhum agendamento para este dia.');
+    }
+
+    return Column(
+      children: List.generate(selectedEvents.length, (index) {
+        final agendamento = selectedEvents[index];
+        final categoryColor = _colorFromHex(agendamento.categoriaCor);
+        final statusColor = _statusColor(agendamento.status);
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: index == selectedEvents.length - 1 ? 0 : 8 * scale,
+          ),
+          child: _AgendaEventCard(
+            time: agendamento.hora,
+            title: agendamento.titulo,
+            description: agendamento.cardDescription,
+            status: agendamento.statusLabel,
+            icon: _iconForCategory(agendamento.categoriaNome),
+            iconColor: categoryColor,
+            iconBackground: _lightBackground(categoryColor),
+            statusBackground: _lightBackground(statusColor),
+            statusColor: statusColor,
+            leftBorderColor: categoryColor,
+          ),
+        );
+      }),
+    );
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pendente':
+        return const Color(0xffFDBA4A);
+      case 'cancelado':
+        return const Color(0xffFF5A5A);
+      case 'realizado':
+        return const Color(0xff01A621);
+      default:
+        return const Color(0xff6176DA);
+    }
+  }
+
+  IconData _iconForCategory(String category) {
+    final label = category.toLowerCase();
+
+    if (label.contains('jur')) {
+      return Icons.balance_outlined;
+    }
+
+    if (label.contains('palestra') || label.contains('educ')) {
+      return Icons.record_voice_over_outlined;
+    }
+
+    if (label.contains('sa')) {
+      return Icons.volunteer_activism_outlined;
+    }
+
+    return Icons.groups_2_outlined;
+  }
+}
+
+class _AgendaMessage extends StatelessWidget {
+  final String message;
+
+  const _AgendaMessage({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final double scale = _Responsive.scale(context);
+
+    return Container(
+      height: 73 * scale,
+      width: double.infinity,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xffFEFEFE),
+        borderRadius: BorderRadius.circular(5 * scale),
+      ),
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: const Color(0xff8C9099),
+          fontSize: 9.68 * scale,
+          fontWeight: FontWeight.w500,
+          height: 1.25,
+        ),
+      ),
     );
   }
 }
@@ -691,10 +965,7 @@ class _AgendaEventCard extends StatelessWidget {
         color: const Color(0xffFEFEFE),
         borderRadius: BorderRadius.circular(5 * scale),
         border: Border(
-          left: BorderSide(
-            color: leftBorderColor,
-            width: 4 * scale,
-          ),
+          left: BorderSide(color: leftBorderColor, width: 4 * scale),
         ),
       ),
       child: Row(
@@ -708,11 +979,7 @@ class _AgendaEventCard extends StatelessWidget {
               color: iconBackground,
               borderRadius: BorderRadius.circular(5 * scale),
             ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 24 * scale,
-            ),
+            child: Icon(icon, color: iconColor, size: 24 * scale),
           ),
 
           SizedBox(width: 12 * scale),
@@ -784,8 +1051,9 @@ class _AgendaEventCard extends StatelessWidget {
               style: TextStyle(
                 color: statusColor,
                 fontSize: status == 'Pendente' ? 8.87 * scale : 8.06 * scale,
-                fontWeight:
-                    status == 'Pendente' ? FontWeight.w400 : FontWeight.w700,
+                fontWeight: status == 'Pendente'
+                    ? FontWeight.w400
+                    : FontWeight.w700,
                 height: 1,
               ),
             ),
@@ -806,23 +1074,195 @@ class _AgendaEventCard extends StatelessWidget {
   }
 }
 
+class _SelectServiceSheet extends StatelessWidget {
+  const _SelectServiceSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.72,
+      minChildSize: 0.45,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xffFDFEFD),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xffD7DCE8),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Escolha um servico',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Color(0xff4F545F),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          height: 1.15,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close, color: Color(0xff70747D)),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: FutureBuilder<List<Servico>>(
+                  future: ServicosRepository().listarServicos(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: AgendaPage.primaryBlue,
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      final error = snapshot.error;
+                      return _SelectServiceMessage(
+                        message: error is ServicosRepositoryException
+                            ? error.message
+                            : 'Nao foi possivel carregar os servicos.',
+                      );
+                    }
+
+                    final services = snapshot.data ?? const <Servico>[];
+                    if (services.isEmpty) {
+                      return const _SelectServiceMessage(
+                        message: 'Nenhum servico disponivel no momento.',
+                      );
+                    }
+
+                    return ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                      itemCount: services.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final service = services[index];
+
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xffFDFEFD),
+                            border: Border.all(
+                              color: const Color(0xffF4F5F8),
+                              width: 0.8,
+                            ),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 6,
+                            ),
+                            title: Text(
+                              service.titulo,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xff4F545F),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              service.footer,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xff8C8F97),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            trailing: const Icon(
+                              Icons.chevron_right,
+                              color: Color(0xff70747D),
+                            ),
+                            onTap: () => Navigator.of(context).pop(service),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SelectServiceMessage extends StatelessWidget {
+  final String message;
+
+  const _SelectServiceMessage({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(0xff676B74),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            height: 1.25,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AddCommitmentButton extends StatelessWidget {
-  const _AddCommitmentButton();
+  final VoidCallback onTap;
+
+  const _AddCommitmentButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final double scale = _Responsive.scale(context);
 
-    return SizedBox(
-      height: 40 * scale,
-      child: Center(
-        child: Text(
-          'Adicionar compromisso',
-          style: TextStyle(
-            color: const Color(0xffAABAEB),
-            fontSize: 11.29 * scale,
-            fontWeight: FontWeight.w700,
-            height: 1,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        height: 40 * scale,
+        child: Center(
+          child: Text(
+            'Adicionar compromisso',
+            style: TextStyle(
+              color: const Color(0xffAABAEB),
+              fontSize: 11.29 * scale,
+              fontWeight: FontWeight.w700,
+              height: 1,
+            ),
           ),
         ),
       ),

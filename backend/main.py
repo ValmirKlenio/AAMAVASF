@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import List
 
 from models import Usuario, Agendamento, HorarioDisponivel, Servico, Notificacao, StatusAgendamento, CategoriaServico ,TipoUsuario
@@ -16,6 +16,42 @@ from schemas import (
 )
 
 app = FastAPI(title="AAMAVASF API")
+
+
+def _build_agendamento_response(a: Agendamento) -> AgendamentoResponse:
+    horario = a.horario
+    servico = horario.servico
+    categoria = servico.categoria_rel if servico else None
+    horario_resp = HorarioResponse(
+        id=horario.id,
+        datahora_inicio=horario.datahora_inicio,
+        vagas_total=horario.vagas_total,
+        vagas_ocupadas=horario.vagas_ocupadas,
+        local=horario.local,
+        observacao=horario.observacao,
+        servico_id=horario.servico_id,
+        tem_vagas=horario.temVagas()
+    )
+    return AgendamentoResponse(
+        id=a.id,
+        data_agendamento=a.data_agendamento,
+        status=a.status,
+        data_cancelamento=a.data_cancelamento,
+        compareceu=a.compareceu,
+        usuario_id=a.usuario_id,
+        horario=horario_resp,
+        servico_titulo=servico.titulo if servico else None,
+        id_agendamento=a.id,
+        id_horario=horario.id,
+        id_servico=servico.id if servico else None,
+        titulo=servico.titulo if servico else None,
+        descricao=servico.descricao if servico else None,
+        data=horario.datahora_inicio.date(),
+        hora=horario.datahora_inicio.strftime("%H:%M"),
+        id_categoria=servico.id_categoria if servico else None,
+        categoria_nome=categoria.nome if categoria else None,
+        categoria_cor=categoria.cor if categoria else None
+    )
 
 
 # ========== Auth endpoints ==========
@@ -62,36 +98,28 @@ def read_users_me(current_user: Usuario = Depends(get_current_user)):
 @app.get("/usuarios/agendamentos", response_model=List[AgendamentoResponse])
 def visualizar_agendamentos(current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
     agendamentos = db.query(Agendamento).filter(Agendamento.usuario_id == current_user.id).all()
-    result = []
-    for a in agendamentos:
-        horario_resp = HorarioResponse(
-            id=a.horario.id,
-            datahora_inicio=a.horario.datahora_inicio,
-            vagas_total=a.horario.vagas_total,
-            vagas_ocupadas=a.horario.vagas_ocupadas,
-            local=a.horario.local,
-            observacao=a.horario.observacao,
-            servico_id=a.horario.servico_id,
-            tem_vagas=a.horario.temVagas()
-        )
-        result.append(AgendamentoResponse(
-            id=a.id,
-            data_agendamento=a.data_agendamento,
-            status=a.status,
-            data_cancelamento=a.data_cancelamento,
-            compareceu=a.compareceu,
-            usuario_id=a.usuario_id,
-            horario=horario_resp,
-            servico_titulo=a.horario.servico.titulo
-        ))
-    return result
+    return [_build_agendamento_response(a) for a in agendamentos]
 
 
 @app.post("/usuarios/agendar", response_model=AgendamentoResponse)
 def agendar(agendamento: AgendamentoCreate, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    horario = db.query(HorarioDisponivel).filter(HorarioDisponivel.id == agendamento.horario_id).first()
+    horario = (
+        db.query(HorarioDisponivel)
+        .filter(HorarioDisponivel.id == agendamento.horario_id)
+        .with_for_update()
+        .first()
+    )
     if not horario:
         raise HTTPException(status_code=404, detail="Horário não encontrado")
+    if horario.datahora_inicio <= datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Este horÃ¡rio nÃ£o estÃ¡ mais disponÃ­vel")
+    agendamento_existente = db.query(Agendamento).filter(
+        Agendamento.usuario_id == current_user.id,
+        Agendamento.horario_id == horario.id,
+        Agendamento.status != StatusAgendamento.CANCELADO
+    ).first()
+    if agendamento_existente:
+        raise HTTPException(status_code=400, detail="VocÃª jÃ¡ possui agendamento para este horÃ¡rio")
     if not horario.temVagas():
         raise HTTPException(status_code=400, detail="Sem vagas disponíveis")
     if not horario.reservaVagas():
@@ -109,26 +137,7 @@ def agendar(agendamento: AgendamentoCreate, current_user: Usuario = Depends(get_
     )
     db.add(notif)
     db.commit()
-    horario_resp = HorarioResponse(
-            id=horario.id,
-            datahora_inicio=horario.datahora_inicio,
-            vagas_total=horario.vagas_total,
-            vagas_ocupadas=horario.vagas_ocupadas,
-            local=horario.local,
-            observacao=horario.observacao,
-            servico_id=horario.servico_id,
-            tem_vagas=horario.temVagas()
-        )
-    return AgendamentoResponse(
-        id=db_agendamento.id,
-        data_agendamento=db_agendamento.data_agendamento,
-        status=db_agendamento.status,
-        data_cancelamento=db_agendamento.data_cancelamento,
-        compareceu=db_agendamento.compareceu,
-        usuario_id=db_agendamento.usuario_id,
-        horario=horario_resp,
-        servico_titulo=horario.servico.titulo
-    )
+    return _build_agendamento_response(db_agendamento)
 
 
 @app.delete("/usuarios/cancelar/{agendamento_id}")
@@ -156,8 +165,11 @@ def visualizar_todos_agendamentos(admin: Usuario = Depends(get_current_admin), d
     agendamentos = db.query(Agendamento).all()
     result = []
     for a in agendamentos:
-        horario_resp = HorarioResponse.model_validate(a.horario)
-        horario_resp.temVagas = a.horario.temVagas()
+        horario = a.horario
+        servico = horario.servico
+        categoria = servico.categoria_rel if servico else None
+        horario_resp = HorarioResponse.model_validate(horario)
+        horario_resp.temVagas = horario.temVagas()
         result.append(AgendamentoResponse(
             id=a.id,
             data_agendamento=a.data_agendamento,
@@ -166,7 +178,17 @@ def visualizar_todos_agendamentos(admin: Usuario = Depends(get_current_admin), d
             compareceu=a.compareceu,
             usuario_id=a.usuario_id,
             horario=horario_resp,
-            servico_titulo=a.horario.servico.titulo
+            servico_titulo=servico.titulo if servico else None,
+            id_agendamento=a.id,
+            id_horario=horario.id,
+            id_servico=servico.id if servico else None,
+            titulo=servico.titulo if servico else None,
+            descricao=servico.descricao if servico else None,
+            data=horario.datahora_inicio.date(),
+            hora=horario.datahora_inicio.strftime("%H:%M"),
+            id_categoria=servico.id_categoria if servico else None,
+            categoria_nome=categoria.nome if categoria else None,
+            categoria_cor=categoria.cor if categoria else None
         ))
     return result
 
@@ -190,6 +212,39 @@ def listar_servicos(db: Session = Depends(get_db)):
         )
         result.append(resp)
     return result
+
+
+@app.get("/servicos/{servico_id}/horarios", response_model=List[HorarioResponse])
+def listar_horarios_disponiveis(servico_id: int, db: Session = Depends(get_db)):
+    servico = db.query(Servico).filter(Servico.id == servico_id, Servico.ativo == True).first()
+    if not servico:
+        raise HTTPException(status_code=404, detail="ServiÃ§o nÃ£o encontrado")
+
+    horarios = (
+        db.query(HorarioDisponivel)
+        .filter(
+            HorarioDisponivel.servico_id == servico_id,
+            HorarioDisponivel.datahora_inicio > datetime.utcnow(),
+            HorarioDisponivel.vagas_ocupadas < HorarioDisponivel.vagas_total
+        )
+        .order_by(HorarioDisponivel.datahora_inicio.asc())
+        .all()
+    )
+
+    return [
+        HorarioResponse(
+            id=horario.id,
+            datahora_inicio=horario.datahora_inicio,
+            vagas_total=horario.vagas_total,
+            vagas_ocupadas=horario.vagas_ocupadas,
+            local=horario.local,
+            observacao=horario.observacao,
+            servico_id=horario.servico_id,
+            tem_vagas=horario.temVagas()
+        )
+        for horario in horarios
+        if horario.temVagas()
+    ]
 
 
 @app.post("/servicos", response_model=ServicoResponse)

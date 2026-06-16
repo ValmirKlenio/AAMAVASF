@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../auth_service.dart';
 import '../../core/routes/app_routes.dart';
 
 class SplashPage extends StatefulWidget {
@@ -16,7 +17,8 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _loadingController;
-  Timer? _navigationTimer;
+  final AuthService _authService = AuthService();
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -27,19 +29,52 @@ class _SplashPageState extends State<SplashPage>
       duration: const Duration(milliseconds: 900),
     )..repeat();
 
-    _navigationTimer = Timer(const Duration(seconds: 5), () {
-      if (!mounted) return;
+    unawaited(_checkInitialRoute());
+  }
 
-      Navigator.pushReplacementNamed(
-        context,
-        AppRoutes.login,
+  Future<void> _checkInitialRoute() async {
+    var route = AppRoutes.login;
+
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+
+      final token = await _authService.getToken().timeout(
+        const Duration(seconds: 2),
       );
-    });
+
+      if (token != null && token.isNotEmpty) {
+        await _authService.buscarUsuarioLogado().timeout(
+          const Duration(seconds: 4),
+        );
+        route = AppRoutes.home;
+      }
+    } catch (_) {
+      await _clearTokenSafely();
+      route = AppRoutes.login;
+    }
+
+    _navigateTo(route);
+  }
+
+  Future<void> _clearTokenSafely() async {
+    try {
+      await _authService.clearToken().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // A splash precisa sempre sair mesmo se o storage falhar.
+    }
+  }
+
+  void _navigateTo(String route) {
+    if (!mounted || _hasNavigated) {
+      return;
+    }
+
+    _hasNavigated = true;
+    Navigator.pushReplacementNamed(context, route);
   }
 
   @override
   void dispose() {
-    _navigationTimer?.cancel();
     _loadingController.dispose();
     super.dispose();
   }
@@ -71,9 +106,7 @@ class _SplashPageState extends State<SplashPage>
             return Stack(
               children: [
                 Positioned.fill(
-                  child: Container(
-                    color: const Color(0xffFDFEFF),
-                  ),
+                  child: Container(color: const Color(0xffFDFEFF)),
                 ),
 
                 Positioned(
@@ -269,9 +302,7 @@ class _SplashPageState extends State<SplashPage>
                           angle: _loadingController.value * 2 * math.pi,
                           child: CustomPaint(
                             size: Size(r(24), r(24)),
-                            painter: _LoadingPainter(
-                              strokeWidth: r(2),
-                            ),
+                            painter: _LoadingPainter(strokeWidth: r(2)),
                           ),
                         );
                       },
@@ -312,14 +343,7 @@ class _BlueWaveClipper extends CustomClipper<Path> {
       60,
     );
 
-    path.cubicTo(
-      size.width * 0.88,
-      45,
-      size.width * 0.96,
-      34,
-      size.width,
-      43,
-    );
+    path.cubicTo(size.width * 0.88, 45, size.width * 0.96, 34, size.width, 43);
 
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
@@ -446,9 +470,7 @@ class _WaveShadowClipper extends CustomClipper<Path> {
 class _LoadingPainter extends CustomPainter {
   final double strokeWidth;
 
-  _LoadingPainter({
-    required this.strokeWidth,
-  });
+  _LoadingPainter({required this.strokeWidth});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -460,13 +482,7 @@ class _LoadingPainter extends CustomPainter {
 
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
 
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      math.pi * 0.75,
-      false,
-      paint,
-    );
+    canvas.drawArc(rect, -math.pi / 2, math.pi * 0.75, false, paint);
   }
 
   @override

@@ -90,6 +90,16 @@ class AgendamentoResponse(BaseModel):
     usuario_id: int
     horario: HorarioResponse
     servico_titulo: Optional[str] = None
+    id_agendamento: Optional[int] = None
+    id_horario: Optional[int] = None
+    id_servico: Optional[int] = None
+    titulo: Optional[str] = None
+    descricao: Optional[str] = None
+    data: Optional[date] = None
+    hora: Optional[str] = None
+    id_categoria: Optional[int] = None
+    categoria_nome: Optional[str] = None
+    categoria_cor: Optional[str] = None
 
     class Config:
         from_attributes = True

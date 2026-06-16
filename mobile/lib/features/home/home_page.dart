@@ -2,15 +2,74 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import 'package:mobile/auth_service.dart';
+import 'package:mobile/core/routes/app_routes.dart';
 import 'package:mobile/core/widgets/bottom_menu.dart';
 import 'package:mobile/core/widgets/notification_card.dart';
 import 'package:mobile/core/widgets/wave_header.dart';
+import 'package:mobile/models/usuario.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   static const Color primaryBlue = Color(0xff012A9F);
   static const Color background = Color(0xffF6F8FC);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final AuthService _authService = AuthService();
+
+  String _primeiroNome = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarUsuario();
+  }
+
+  Future<void> _carregarUsuario() async {
+    try {
+      final Usuario usuario = await _authService.buscarUsuarioLogado();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _primeiroNome = usuario.primeiroNome;
+      });
+    } on AuthException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      if (error.requiresLogin) {
+        await _authService.clearToken();
+
+        if (!mounted) {
+          return;
+        }
+
+        Navigator.pushReplacementNamed(context, AppRoutes.login);
+        return;
+      }
+
+      setState(() {
+        _primeiroNome = 'Usuário';
+      });
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _primeiroNome = 'Usuário';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +85,11 @@ class HomePage extends StatelessWidget {
         systemStatusBarContrastEnforced: false,
       ),
       child: Scaffold(
-        backgroundColor: background,
+        backgroundColor: HomePage.background,
         body: SingleChildScrollView(
           child: Column(
             children: [
-              const _HomeHeader(),
+              _HomeHeader(primeiroNome: _primeiroNome),
 
               SizedBox(height: 14 * scale),
 
@@ -43,9 +102,7 @@ class HomePage extends StatelessWidget {
                   children: [
                     SizedBox(height: 8 * scale),
 
-                    const _SectionTitle(
-                      title: 'Acesso rápido',
-                    ),
+                    const _SectionTitle(title: 'Acesso rápido'),
 
                     SizedBox(height: 10 * scale),
 
@@ -96,9 +153,7 @@ class HomePage extends StatelessWidget {
             ],
           ),
         ),
-        bottomNavigationBar: const BottomMenu(
-          selectedIndex: 0,
-        ),
+        bottomNavigationBar: const BottomMenu(selectedIndex: 0),
       ),
     );
   }
@@ -143,7 +198,9 @@ class _Responsive {
 }
 
 class _HomeHeader extends StatelessWidget {
-  const _HomeHeader();
+  final String primeiroNome;
+
+  const _HomeHeader({required this.primeiroNome});
 
   @override
   Widget build(BuildContext context) {
@@ -153,12 +210,13 @@ class _HomeHeader extends StatelessWidget {
 
     final double topSafe = MediaQuery.of(context).padding.top;
 
-    final double headerHeight = topSafe +
+    final double headerHeight =
+        topSafe +
         (isVerySmallScreen
             ? 168 * scale
             : isSmallScreen
-                ? 176 * scale
-                : 184 * scale);
+            ? 176 * scale
+            : 184 * scale);
 
     return WaveHeader(
       height: headerHeight,
@@ -208,7 +266,7 @@ class _HomeHeader extends StatelessWidget {
             top: topSafe + (100 * scale),
             left: 18 * scale,
             child: Text(
-              'Olá, Maria! 👋',
+              primeiroNome.isEmpty ? 'Olá,' : 'Olá, $primeiroNome! 👋',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -237,9 +295,7 @@ class _HomeHeader extends StatelessWidget {
           Positioned(
             top: topSafe + (13 * scale),
             right: 24 * scale,
-            child: NotificationBellButton(
-              scale: scale,
-            ),
+            child: NotificationBellButton(scale: scale),
           ),
 
           Positioned(
@@ -269,8 +325,8 @@ class _InfoBanner extends StatelessWidget {
     final double bannerHeight = isVerySmallScreen
         ? 136 * scale
         : isSmallScreen
-            ? 142 * scale
-            : 148 * scale;
+        ? 142 * scale
+        : 148 * scale;
 
     return FractionallySizedBox(
       widthFactor: isVerySmallScreen ? 0.94 : 0.93,
@@ -295,8 +351,8 @@ class _InfoBanner extends StatelessWidget {
                 flex: isVerySmallScreen
                     ? 58
                     : isSmallScreen
-                        ? 56
-                        : 54,
+                    ? 56
+                    : 54,
                 child: Padding(
                   padding: EdgeInsets.only(
                     left: isVerySmallScreen ? 15 * scale : 20 * scale,
@@ -318,8 +374,8 @@ class _InfoBanner extends StatelessWidget {
                               fontSize: isVerySmallScreen
                                   ? 12.4 * scale
                                   : isSmallScreen
-                                      ? 13.1 * scale
-                                      : 14.2 * scale,
+                                  ? 13.1 * scale
+                                  : 14.2 * scale,
                               fontWeight: FontWeight.w700,
                               height: 1.15,
                             ),
@@ -340,8 +396,8 @@ class _InfoBanner extends StatelessWidget {
                           fontSize: isVerySmallScreen
                               ? 8.4 * scale
                               : isSmallScreen
-                                  ? 8.8 * scale
-                                  : 9.3 * scale,
+                              ? 8.8 * scale
+                              : 9.3 * scale,
                           fontWeight: FontWeight.w500,
                           height: 1.35,
                         ),
@@ -385,8 +441,8 @@ class _InfoBanner extends StatelessWidget {
                 flex: isVerySmallScreen
                     ? 42
                     : isSmallScreen
-                        ? 44
-                        : 46,
+                    ? 44
+                    : 46,
                 child: Image.asset(
                   'assets/images/banner_hands.png',
                   height: double.infinity,
@@ -406,9 +462,7 @@ class _InfoBanner extends StatelessWidget {
 class _SectionTitle extends StatelessWidget {
   final String title;
 
-  const _SectionTitle({
-    required this.title,
-  });
+  const _SectionTitle({required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -552,10 +606,7 @@ class _QuickAccessCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10 * scale),
-        border: Border.all(
-          color: const Color(0xffEFF2F7),
-          width: 1.2 * scale,
-        ),
+        border: Border.all(color: const Color(0xffEFF2F7), width: 1.2 * scale),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -574,11 +625,7 @@ class _QuickAccessCard extends StatelessWidget {
                       width: 22 * scale,
                       height: 22 * scale,
                     )
-                  : Icon(
-                      icon,
-                      color: iconColor,
-                      size: 22 * scale,
-                    ),
+                  : Icon(icon, color: iconColor, size: 22 * scale),
             ),
           ),
 
@@ -680,7 +727,9 @@ class _EventCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(4 * scale),
             ),
             child: Icon(
-              isCalendar ? Icons.calendar_month_outlined : Icons.favorite_border,
+              isCalendar
+                  ? Icons.calendar_month_outlined
+                  : Icons.favorite_border,
               color: iconColor,
               size: 23 * scale,
             ),
