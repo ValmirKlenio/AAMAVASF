@@ -31,11 +31,7 @@ class AgendamentoRepository {
       return data
           .whereType<Map<String, dynamic>>()
           .map(HorarioDisponivel.fromJson)
-          .where(
-            (horario) =>
-                horario.temVagas &&
-                horario.datahoraInicio.isAfter(DateTime.now()),
-          )
+          .where((horario) => horario.temVagas)
           .toList();
     } on DioException catch (error) {
       throw AgendamentoRepositoryException.fromDio(

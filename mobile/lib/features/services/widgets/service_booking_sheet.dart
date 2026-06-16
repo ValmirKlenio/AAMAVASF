@@ -184,7 +184,8 @@ class _ServiceBookingSheetState extends State<_ServiceBookingSheet> {
                       controller: scrollController,
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                       itemCount: horarios.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final horario = horarios[index];
                         final isLoading = _loadingHorarioId == horario.id;

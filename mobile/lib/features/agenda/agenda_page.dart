@@ -4,11 +4,10 @@ import 'package:flutter/services.dart';
 import '../../core/widgets/bottom_menu.dart';
 import '../../core/widgets/notification_card.dart';
 import '../../core/widgets/wave_header.dart';
-import '../services/models/servico.dart';
-import '../services/repositories/servicos_repository.dart';
-import '../services/widgets/service_booking_sheet.dart';
 import 'models/agendamento.dart';
 import 'repositories/agenda_repository.dart';
+
+enum _AgendaTab { eventos, compromissos }
 
 class AgendaPage extends StatefulWidget {
   const AgendaPage({super.key});
@@ -25,6 +24,7 @@ class _AgendaPageState extends State<AgendaPage> {
   late Future<List<Agendamento>> _agendamentosFuture;
   late DateTime _focusedMonth;
   late DateTime _selectedDate;
+  _AgendaTab _selectedTab = _AgendaTab.eventos;
 
   @override
   void initState() {
@@ -56,24 +56,10 @@ class _AgendaPageState extends State<AgendaPage> {
     });
   }
 
-  Future<void> _openAddCommitmentFlow() async {
-    final service = await showModalBottomSheet<Servico>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _SelectServiceSheet(),
-    );
-
-    if (!mounted || service == null) {
-      return;
-    }
-
-    final scheduled = await showServiceBookingSheet(context, service: service);
-    if (!mounted || scheduled != true) {
-      return;
-    }
-
-    setState(_loadAgendamentos);
+  void _selectTab(_AgendaTab tab) {
+    setState(() {
+      _selectedTab = tab;
+    });
   }
 
   @override
@@ -108,7 +94,10 @@ class _AgendaPageState extends State<AgendaPage> {
                     children: [
                       SizedBox(height: 10 * scale),
 
-                      const _TabsCard(),
+                      _TabsCard(
+                        selectedTab: _selectedTab,
+                        onTabSelected: _selectTab,
+                      ),
 
                       SizedBox(height: 10 * scale),
 
@@ -120,6 +109,16 @@ class _AgendaPageState extends State<AgendaPage> {
                           final error = snapshot.hasError
                               ? snapshot.error
                               : null;
+
+                          if (_selectedTab == _AgendaTab.compromissos) {
+                            return _AgendaCommitmentsList(
+                              agendamentos: agendamentos,
+                              isLoading:
+                                  snapshot.connectionState !=
+                                  ConnectionState.done,
+                              error: error,
+                            );
+                          }
 
                           return Column(
                             children: [
@@ -150,8 +149,6 @@ class _AgendaPageState extends State<AgendaPage> {
                           );
                         },
                       ),
-
-                      _AddCommitmentButton(onTap: _openAddCommitmentFlow),
 
                       SizedBox(height: 24 * scale),
                     ],
@@ -336,7 +333,10 @@ class _AgendaHeader extends StatelessWidget {
 }
 
 class _TabsCard extends StatelessWidget {
-  const _TabsCard();
+  final _AgendaTab selectedTab;
+  final ValueChanged<_AgendaTab> onTabSelected;
+
+  const _TabsCard({required this.selectedTab, required this.onTabSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -351,7 +351,77 @@ class _TabsCard extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Container(
+            child: _AgendaTabItem(
+              label: 'Eventos',
+              icon: Icons.calendar_month_outlined,
+              isSelected: selectedTab == _AgendaTab.eventos,
+              onTap: () => onTabSelected(_AgendaTab.eventos),
+            ),
+          ),
+
+          Expanded(
+            child: _AgendaTabItem(
+              label: 'Meus compromissos',
+              icon: Icons.person_outline,
+              isSelected: selectedTab == _AgendaTab.compromissos,
+              onTap: () => onTabSelected(_AgendaTab.compromissos),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AgendaTabItem extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _AgendaTabItem({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double scale = _Responsive.scale(context);
+
+    final content = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          icon,
+          color: isSelected ? const Color(0xff536AD3) : const Color(0xff90939C),
+          size: (label == 'Eventos' ? 14 : 15) * scale,
+        ),
+        SizedBox(width: (label == 'Eventos' ? 6 : 7) * scale),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: isSelected
+                  ? const Color(0xff536AD3)
+                  : const Color(0xff90939C),
+              fontSize: (label == 'Eventos' ? 9.68 : 10.48) * scale,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              height: 1,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: isSelected
+          ? Container(
               height: 35 * scale,
               margin: EdgeInsets.all(4 * scale),
               decoration: BoxDecoration(
@@ -362,53 +432,9 @@ class _TabsCard extends StatelessWidget {
                   width: 0.81 * scale,
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.calendar_month_outlined,
-                    color: const Color(0xff536AD3),
-                    size: 14 * scale,
-                  ),
-                  SizedBox(width: 6 * scale),
-                  Text(
-                    'Eventos',
-                    style: TextStyle(
-                      color: const Color(0xff536AD3),
-                      fontSize: 9.68 * scale,
-                      fontWeight: FontWeight.w700,
-                      height: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.person_outline,
-                  color: const Color(0xff90939C),
-                  size: 15 * scale,
-                ),
-                SizedBox(width: 7 * scale),
-                Text(
-                  'Meus compromissos',
-                  style: TextStyle(
-                    color: const Color(0xff90939C),
-                    fontSize: 10.48 * scale,
-                    fontWeight: FontWeight.w500,
-                    height: 1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+              child: content,
+            )
+          : Center(child: content),
     );
   }
 }
@@ -898,6 +924,111 @@ class _AgendaEventsList extends StatelessWidget {
   }
 }
 
+class _AgendaCommitmentsList extends StatelessWidget {
+  final List<Agendamento> agendamentos;
+  final bool isLoading;
+  final Object? error;
+
+  const _AgendaCommitmentsList({
+    required this.agendamentos,
+    required this.isLoading,
+    required this.error,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double scale = _Responsive.scale(context);
+
+    if (isLoading) {
+      return SizedBox(
+        height: 73 * scale,
+        child: const Center(
+          child: CircularProgressIndicator(color: AgendaPage.primaryBlue),
+        ),
+      );
+    }
+
+    if (error != null) {
+      return _AgendaMessage(
+        message: error is AgendaRepositoryException
+            ? (error as AgendaRepositoryException).message
+            : 'NÃ£o foi possÃ­vel carregar seus agendamentos.',
+      );
+    }
+
+    final commitments = List<Agendamento>.from(agendamentos)
+      ..sort((first, second) {
+        final byDate = first.data.compareTo(second.data);
+        if (byDate != 0) {
+          return byDate;
+        }
+
+        return first.hora.compareTo(second.hora);
+      });
+
+    if (commitments.isEmpty) {
+      return const _AgendaMessage(message: 'Nenhum compromisso agendado.');
+    }
+
+    return Column(
+      children: List.generate(commitments.length, (index) {
+        final agendamento = commitments[index];
+        final categoryColor = _colorFromHex(agendamento.categoriaCor);
+        final statusColor = _statusColor(agendamento.status);
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: index == commitments.length - 1 ? 0 : 8 * scale,
+          ),
+          child: _AgendaEventCard(
+            time: agendamento.dataHoraLabel,
+            title: agendamento.titulo,
+            description: agendamento.cardDescription,
+            status: agendamento.statusLabel,
+            icon: _iconForCategory(agendamento.categoriaNome),
+            iconColor: categoryColor,
+            iconBackground: _lightBackground(categoryColor),
+            statusBackground: _lightBackground(statusColor),
+            statusColor: statusColor,
+            leftBorderColor: categoryColor,
+          ),
+        );
+      }),
+    );
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pendente':
+        return const Color(0xffFDBA4A);
+      case 'cancelado':
+        return const Color(0xffFF5A5A);
+      case 'realizado':
+        return const Color(0xff01A621);
+      default:
+        return const Color(0xff6176DA);
+    }
+  }
+
+  IconData _iconForCategory(String category) {
+    final label = category.toLowerCase();
+
+    if (label.contains('jur')) {
+      return Icons.balance_outlined;
+    }
+
+    if (label.contains('palestra') || label.contains('educ')) {
+      return Icons.record_voice_over_outlined;
+    }
+
+    if (label.contains('sa')) {
+      return Icons.volunteer_activism_outlined;
+    }
+
+    return Icons.groups_2_outlined;
+  }
+}
+
 class _AgendaMessage extends StatelessWidget {
   final String message;
 
@@ -1069,202 +1200,6 @@ class _AgendaEventCard extends StatelessWidget {
 
           SizedBox(width: 8 * scale),
         ],
-      ),
-    );
-  }
-}
-
-class _SelectServiceSheet extends StatelessWidget {
-  const _SelectServiceSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.72,
-      minChildSize: 0.45,
-      maxChildSize: 0.9,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xffFDFEFD),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xffD7DCE8),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Escolha um servico',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Color(0xff4F545F),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          height: 1.15,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close, color: Color(0xff70747D)),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: FutureBuilder<List<Servico>>(
-                  future: ServicosRepository().listarServicos(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          color: AgendaPage.primaryBlue,
-                        ),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      final error = snapshot.error;
-                      return _SelectServiceMessage(
-                        message: error is ServicosRepositoryException
-                            ? error.message
-                            : 'Nao foi possivel carregar os servicos.',
-                      );
-                    }
-
-                    final services = snapshot.data ?? const <Servico>[];
-                    if (services.isEmpty) {
-                      return const _SelectServiceMessage(
-                        message: 'Nenhum servico disponivel no momento.',
-                      );
-                    }
-
-                    return ListView.separated(
-                      controller: scrollController,
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                      itemCount: services.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final service = services[index];
-
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xffFDFEFD),
-                            border: Border.all(
-                              color: const Color(0xffF4F5F8),
-                              width: 0.8,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 6,
-                            ),
-                            title: Text(
-                              service.titulo,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xff4F545F),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            subtitle: Text(
-                              service.footer,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xff8C8F97),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            trailing: const Icon(
-                              Icons.chevron_right,
-                              color: Color(0xff70747D),
-                            ),
-                            onTap: () => Navigator.of(context).pop(service),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _SelectServiceMessage extends StatelessWidget {
-  final String message;
-
-  const _SelectServiceMessage({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Color(0xff676B74),
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            height: 1.25,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AddCommitmentButton extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _AddCommitmentButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final double scale = _Responsive.scale(context);
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        height: 40 * scale,
-        child: Center(
-          child: Text(
-            'Adicionar compromisso',
-            style: TextStyle(
-              color: const Color(0xffAABAEB),
-              fontSize: 11.29 * scale,
-              fontWeight: FontWeight.w700,
-              height: 1,
-            ),
-          ),
-        ),
       ),
     );
   }

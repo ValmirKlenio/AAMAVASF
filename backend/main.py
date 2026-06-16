@@ -111,7 +111,7 @@ def agendar(agendamento: AgendamentoCreate, current_user: Usuario = Depends(get_
     )
     if not horario:
         raise HTTPException(status_code=404, detail="Horário não encontrado")
-    if horario.datahora_inicio <= datetime.utcnow():
+    if horario.datahora_inicio <= datetime.now():
         raise HTTPException(status_code=400, detail="Este horÃ¡rio nÃ£o estÃ¡ mais disponÃ­vel")
     agendamento_existente = db.query(Agendamento).filter(
         Agendamento.usuario_id == current_user.id,
@@ -224,7 +224,7 @@ def listar_horarios_disponiveis(servico_id: int, db: Session = Depends(get_db)):
         db.query(HorarioDisponivel)
         .filter(
             HorarioDisponivel.servico_id == servico_id,
-            HorarioDisponivel.datahora_inicio > datetime.utcnow(),
+            HorarioDisponivel.datahora_inicio > datetime.now(),
             HorarioDisponivel.vagas_ocupadas < HorarioDisponivel.vagas_total
         )
         .order_by(HorarioDisponivel.datahora_inicio.asc())

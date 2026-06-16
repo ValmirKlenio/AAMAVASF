@@ -67,6 +67,17 @@ class Agendamento {
     return '$year-$month-$day';
   }
 
+  String get dataHoraLabel {
+    final day = data.day.toString().padLeft(2, '0');
+    final month = data.month.toString().padLeft(2, '0');
+
+    if (hora.trim().isEmpty) {
+      return '$day/$month';
+    }
+
+    return '$day/$month - $hora';
+  }
+
   String get statusLabel {
     if (status.isEmpty) {
       return 'Inscrito';
