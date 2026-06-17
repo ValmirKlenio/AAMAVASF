@@ -33,11 +33,10 @@ class _SplashPageState extends State<SplashPage>
   }
 
   Future<void> _checkInitialRoute() async {
+    final stopwatch = Stopwatch()..start();
     var route = AppRoutes.login;
 
     try {
-      await Future<void>.delayed(const Duration(milliseconds: 700));
-
       final token = await _authService.getToken().timeout(
         const Duration(seconds: 2),
       );
@@ -51,6 +50,12 @@ class _SplashPageState extends State<SplashPage>
     } catch (_) {
       await _clearTokenSafely();
       route = AppRoutes.login;
+    }
+
+    const minimumSplashDuration = Duration(milliseconds: 2200);
+    final remainingSplashTime = minimumSplashDuration - stopwatch.elapsed;
+    if (remainingSplashTime > Duration.zero) {
+      await Future<void>.delayed(remainingSplashTime);
     }
 
     _navigateTo(route);

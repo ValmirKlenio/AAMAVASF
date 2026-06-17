@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import 'package:mobile/core/config/api_config.dart';
+
 import '../models/servico.dart';
 
 class ServicosRepository {
@@ -8,7 +10,7 @@ class ServicosRepository {
           dio ??
           Dio(
             BaseOptions(
-              baseUrl: 'http://10.0.2.2:8000',
+              baseUrl: ApiConfig.baseUrl,
               connectTimeout: const Duration(seconds: 10),
               receiveTimeout: const Duration(seconds: 10),
             ),

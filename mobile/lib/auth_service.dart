@@ -1,12 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'core/config/api_config.dart';
 import 'models/usuario.dart';
 
 class AuthService {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'http://10.0.2.2:8000',
+      baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
     ),
@@ -128,6 +129,36 @@ class AuthService {
       );
     } on DioException catch (e) {
       throw _handleSessionError(e);
+    }
+  }
+
+  Future<void> redefinirSenha({
+    required String cpf,
+    required String novaSenha,
+  }) async {
+    try {
+      await _dio.post(
+        '/usuarios/redefinir-senha',
+        data: {'cpf': cpf, 'nova_senha': novaSenha},
+      );
+    } on DioException catch (e) {
+      final detail = _detailFromResponse(e);
+
+      if (e.response?.statusCode == 404) {
+        throw AuthException(
+          detail != null && detail.isNotEmpty ? detail : 'CPF não encontrado.',
+        );
+      }
+
+      if (e.response?.statusCode == 400) {
+        throw AuthException(
+          detail != null && detail.isNotEmpty
+              ? detail
+              : 'Não foi possível redefinir a senha.',
+        );
+      }
+
+      throw _handleCommonError(e);
     }
   }
 

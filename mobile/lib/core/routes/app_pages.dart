@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/auth/login/login_page.dart';
+import '../../features/auth/forgot_password/forgot_password_page.dart';
 import '../../features/auth/register/register_page.dart';
 import '../../features/contact/contact_page.dart';
 import '../../features/home/home_page.dart';
@@ -25,6 +26,10 @@ class AppPages {
 
       case AppRoutes.register:
         page = const RegisterPage();
+        break;
+
+      case AppRoutes.forgotPassword:
+        page = const ForgotPasswordPage();
         break;
 
       case AppRoutes.home:

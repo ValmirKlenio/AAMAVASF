@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../../auth_service.dart';
-import '../../../../core/routes/app_routes.dart';
-import '../../../../core/widgets/wave_header.dart';
-import '../../../../core/widgets/custom_text_field.dart';
-import '../../../../core/widgets/primary_button.dart';
+import '../../../auth_service.dart';
+import '../../../core/routes/app_routes.dart';
+import '../../../core/widgets/wave_header.dart';
+import '../../../core/widgets/custom_text_field.dart';
+import '../../../core/widgets/primary_button.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});

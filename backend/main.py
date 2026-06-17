@@ -12,7 +12,7 @@ from dependencies import (
 from schemas import (
     UsuarioCreate, UsuarioResponse, Token, ServicoCreate, ServicoResponse,
     HorarioCreate, HorarioResponse, AgendamentoCreate, AgendamentoResponse,
-    NotificacaoResponse
+    NotificacaoResponse, RedefinirSenhaSchema
 )
 
 app = FastAPI(title="AAMAVASF API")
@@ -87,6 +87,33 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.post("/usuarios/redefinir-senha")
+def redefinir_senha(dados: RedefinirSenhaSchema, db: Session = Depends(get_db)):
+    usuario = db.query(Usuario).filter(Usuario.cpf == dados.cpf).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="CPF não encontrado")
+
+    if len(dados.nova_senha) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="A nova senha deve ter pelo menos 6 caracteres",
+        )
+
+    usuario.senha_hash = get_password_hash(dados.nova_senha)
+    db.commit()
+
+    notif = Notificacao(
+        titulo="Senha redefinida",
+        mensagem="Sua senha foi redefinida com sucesso.",
+        usuario_id=usuario.id,
+        tipo="seguranca",
+    )
+    db.add(notif)
+    db.commit()
+
+    return {"message": "Senha redefinida com sucesso"}
 
 
 # ========== Usuários ==========

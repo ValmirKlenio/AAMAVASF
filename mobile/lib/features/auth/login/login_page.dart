@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile/features/auth/login/widgets/social_login_widget.dart';
 
-import '../../../../auth_service.dart';
-import '../../../../core/routes/app_routes.dart';
-import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/widgets/wave_header.dart';
-import '../../../../core/widgets/custom_text_field.dart';
-import '../../../../core/widgets/primary_button.dart';
+import '../../../auth_service.dart';
+import '../../../core/routes/app_routes.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/wave_header.dart';
+import '../../../core/widgets/custom_text_field.dart';
+import '../../../core/widgets/primary_button.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -186,7 +186,14 @@ class _LoginPageState extends State<LoginPage> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.forgotPassword,
+                                );
+                              },
                         child: const Text(
                           'Esqueceu sua senha?',
                           style: TextStyle(

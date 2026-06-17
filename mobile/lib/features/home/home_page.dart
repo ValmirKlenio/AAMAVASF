@@ -418,32 +418,6 @@ class _InfoBanner extends StatelessWidget {
 
                       const Spacer(),
 
-                      SizedBox(
-                        width: 74 * scale,
-                        height: 24 * scale,
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xff053FD8),
-                            padding: EdgeInsets.zero,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5 * scale),
-                            ),
-                          ),
-                          child: Text(
-                            'Saiba mais',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: const Color(0xffD8DFF3),
-                              fontSize: 8.8 * scale,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-
                       SizedBox(height: 6 * scale),
                     ],
                   ),
@@ -688,31 +662,15 @@ class _EventsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final double scale = _Responsive.scale(context);
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Proximos eventos',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: const Color(0xff434445),
-            fontSize: 12.75 * scale,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-
-        Text(
-          'Ver todos',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: const Color(0xff5368D0),
-            fontSize: 9.57 * scale,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
+    return Text(
+      'Proximos eventos',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: const Color(0xff434445),
+        fontSize: 12.75 * scale,
+        fontWeight: FontWeight.w700,
+      ),
     );
   }
 }

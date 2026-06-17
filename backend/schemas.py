@@ -34,6 +34,11 @@ class Token(BaseModel):
     token_type: str
 
 
+class RedefinirSenhaSchema(BaseModel):
+    cpf: str
+    nova_senha: str
+
+
 class ServicoCreate(BaseModel):
     titulo: str
     descricao: Optional[str] = None
